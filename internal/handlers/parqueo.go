@@ -174,3 +174,127 @@ func DeleteVehiculo(w http.ResponseWriter, r *http.Request, store storage.Almace
 	RespondJSON(w, http.StatusNoContent, nil)
 }
 
+//Handlers de Visitas de vehículos externos
+
+// GetAllVisitas atiende GET /api/v1/visitas.
+func GetAllVisitas(w http.ResponseWriter, r *http.Request, store storage.AlmacenParqueo) {
+	visitas := store.ListarVisitas()
+	RespondJSON(w, http.StatusOK, visitas)
+}
+ 
+//GetVisita atiende GET /api/v1/visitas/{id}.
+func GetVisita(w http.ResponseWriter, r *http.Request, store storage.AlmacenParqueo) {
+	id, ok := parseID(r)
+	if !ok {
+		RespondError(w, http.StatusBadRequest, "ID debe ser un número entero positivo")
+		return
+	}
+ 
+	visita, encontrada := store.BuscarVisitaPorID(id)
+	if !encontrada {
+		RespondError(w, http.StatusNotFound, "Visita no encontrada")
+		return
+	}
+ 
+	RespondJSON(w, http.StatusOK, visita)
+}
+ 
+// CreateVisita atiende POST /api/v1/visitas.
+// El servidor genera el CodigoQR y registra la hora de entrada automáticamente.
+func CreateVisita(w http.ResponseWriter, r *http.Request, store storage.AlmacenParqueo) {
+	var body models.VisitaVehiculo
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		RespondError(w, http.StatusBadRequest, "JSON inválido: "+err.Error())
+		return
+	}
+ 
+	if body.CondominioID == 0 {
+		RespondError(w, http.StatusBadRequest, "condominio_id es requerido")
+		return
+	}
+	if body.ResidenteID == 0 {
+		RespondError(w, http.StatusBadRequest, "residente_id es requerido")
+		return
+	}
+	if strings.TrimSpace(body.PlacaVisitante) == "" {
+		RespondError(w, http.StatusBadRequest, "placa_visitante es requerida")
+		return
+	}
+	if strings.TrimSpace(body.NombreVisitante) == "" {
+		RespondError(w, http.StatusBadRequest, "nombre_visitante es requerido")
+		return
+	}
+ 
+	// El sistema asigna el QR y la hora de entrada; el cliente no puede sobreescribirlos
+	body.CodigoQR = fmt.Sprintf("QR-%d", time.Now().UnixNano())
+	body.EstadoQR = "pendiente"
+	ahora := time.Now()
+	body.HoraEntrada = &ahora
+	body.HoraSalida = nil
+ 
+	visita := store.CrearVisita(body)
+	RespondJSON(w, http.StatusCreated, visita)
+}
+ 
+// UpdateVisita atiende PUT /api/v1/visitas/{id}.
+func UpdateVisita(w http.ResponseWriter, r *http.Request, store storage.AlmacenParqueo) {
+	id, ok := parseID(r)
+	if !ok {
+		RespondError(w, http.StatusBadRequest, "id debe ser un número entero positivo")
+		return
+	}
+ 
+	var body models.VisitaVehiculo
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		RespondError(w, http.StatusBadRequest, "JSON inválido: "+err.Error())
+		return
+	}
+ 
+	if strings.TrimSpace(body.PlacaVisitante) == "" {
+		RespondError(w, http.StatusBadRequest, "placa_visitante es requerida")
+		return
+	}
+ 
+	visita, encontrada := store.ActualizarVisita(id, body)
+	if !encontrada {
+		RespondError(w, http.StatusNotFound, "visita no encontrada")
+		return
+	}
+ 
+	RespondJSON(w, http.StatusOK, visita)
+}
+ 
+// RegistrarSalida atiende POST /api/v1/visitas/{id}/salida.
+// Marca la hora de salida y expira el código QR de la visita.
+func RegistrarSalida(w http.ResponseWriter, r *http.Request, store storage.AlmacenParqueo) {
+	id, ok := parseID(r)
+	if !ok {
+		RespondError(w, http.StatusBadRequest, "id debe ser un número entero positivo")
+		return
+	}
+ 
+	visita, encontrada := store.RegistrarSalidaVisita(id)
+	if !encontrada {
+		RespondError(w, http.StatusNotFound, "visita no encontrada")
+		return
+	}
+ 
+	RespondJSON(w, http.StatusOK, visita)
+}
+ 
+// DeleteVisita atiende DELETE /api/v1/visitas/{id}.
+func DeleteVisita(w http.ResponseWriter, r *http.Request, store storage.AlmacenParqueo) {
+	id, ok := parseID(r)
+	if !ok {
+		RespondError(w, http.StatusBadRequest, "id debe ser un número entero positivo")
+		return
+	}
+ 
+	if !store.BorrarVisita(id) {
+		RespondError(w, http.StatusNotFound, "visita no encontrada")
+		return
+	}
+ 
+	RespondJSON(w, http.StatusNoContent, nil)
+}
+
