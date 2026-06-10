@@ -1,4 +1,3 @@
-// Command condominio-api arranca el servidor HTTP del Sistema de Gestión de Condominios.
 package main
  
 import (
