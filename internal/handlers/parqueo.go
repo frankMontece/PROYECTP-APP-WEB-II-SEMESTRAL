@@ -77,7 +77,8 @@ func MontarRutasParqueo(r chi.Router, store storage.AlmacenParqueo) {
 	})
 }
 
-//Handlers de Vehículos de residentes
+///-----------------------------------Handlers de Vehículos de residentes
+
 //GetAllVehiculos atiende GET /api/v1/vehiculos
 func GetAllVehiculos(w http.ResponseWriter, r *http.Request, store storage.AlmacenParqueo) {
 	vehiculos := store.ListarVehiculos()
@@ -174,7 +175,7 @@ func DeleteVehiculo(w http.ResponseWriter, r *http.Request, store storage.Almace
 	RespondJSON(w, http.StatusNoContent, nil)
 }
 
-//Handlers de Visitas de vehículos externos
+///-----------------------------------Handlers de Visitas de vehículos externos
 
 // GetAllVisitas atiende GET /api/v1/visitas.
 func GetAllVisitas(w http.ResponseWriter, r *http.Request, store storage.AlmacenParqueo) {
@@ -298,3 +299,71 @@ func DeleteVisita(w http.ResponseWriter, r *http.Request, store storage.AlmacenP
 	RespondJSON(w, http.StatusNoContent, nil)
 }
 
+///-----------------------------------Handlers de Bitácora de accesos de vehículos de residentes
+
+// GetAllAccesos atiende GET /api/v1/accesos.
+func GetAllAccesos(w http.ResponseWriter, r *http.Request, store storage.AlmacenParqueo) {
+	accesos := store.ListarAccesos()
+	RespondJSON(w, http.StatusOK, accesos)
+}
+ 
+// GetAcceso atiende GET /api/v1/accesos/{id}.
+func GetAcceso(w http.ResponseWriter, r *http.Request, store storage.AlmacenParqueo) {
+	id, ok := parseID(r)
+	if !ok {
+		RespondError(w, http.StatusBadRequest, "id debe ser un número entero positivo")
+		return
+	}
+ 
+	acceso, encontrado := store.BuscarAccesoPorID(id)
+	if !encontrado {
+		RespondError(w, http.StatusNotFound, "acceso no encontrado")
+		return
+	}
+ 
+	RespondJSON(w, http.StatusOK, acceso)
+}
+ 
+// CreateAcceso atiende POST /api/v1/accesos.
+func CreateAcceso(w http.ResponseWriter, r *http.Request, store storage.AlmacenParqueo) {
+	var body models.AccesoVehiculo
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		RespondError(w, http.StatusBadRequest, "JSON inválido: "+err.Error())
+		return
+	}
+ 
+	if body.VehiculoID == 0 {
+		RespondError(w, http.StatusBadRequest, "vehiculo_id es requerido")
+		return
+	}
+	if body.CondominioID == 0 {
+		RespondError(w, http.StatusBadRequest, "condominio_id es requerido")
+		return
+	}
+	if body.TipoMovimiento != "entrada" && body.TipoMovimiento != "salida" {
+		RespondError(w, http.StatusBadRequest, "tipo_movimiento debe ser 'entrada' o 'salida'")
+		return
+	}
+ 
+	// La fecha y hora la registra el servidor, no el cliente
+	body.FechaHora = time.Now()
+ 
+	acceso := store.CrearAcceso(body)
+	RespondJSON(w, http.StatusCreated, acceso)
+}
+ 
+// DeleteAcceso atiende DELETE /api/v1/accesos/{id}.
+func DeleteAcceso(w http.ResponseWriter, r *http.Request, store storage.AlmacenParqueo) {
+	id, ok := parseID(r)
+	if !ok {
+		RespondError(w, http.StatusBadRequest, "id debe ser un número entero positivo")
+		return
+	}
+ 
+	if !store.BorrarAcceso(id) {
+		RespondError(w, http.StatusNotFound, "acceso no encontrado")
+		return
+	}
+ 
+	RespondJSON(w, http.StatusNoContent, nil)
+}
