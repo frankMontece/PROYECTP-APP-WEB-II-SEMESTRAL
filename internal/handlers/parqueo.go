@@ -25,7 +25,7 @@ func parseID(r *http.Request) (uint, bool) {
 
 func MontarRutasParqueo(r chi.Router, store storage.AlmacenParqueo) {
  
-	// --- Vehículos de residentes ---
+	// Vehículos de residentes 
 	r.Get("/vehiculos", func(w http.ResponseWriter, req *http.Request) {
 		GetAllVehiculos(w, req, store)
 	})
@@ -42,7 +42,7 @@ func MontarRutasParqueo(r chi.Router, store storage.AlmacenParqueo) {
 		DeleteVehiculo(w, req, store)
 	})
  
-	// --- Visitas de vehículos externos ---
+	// Visitas de vehículos externos 
 	r.Get("/visitas", func(w http.ResponseWriter, req *http.Request) {
 		GetAllVisitas(w, req, store)
 	})
@@ -62,7 +62,7 @@ func MontarRutasParqueo(r chi.Router, store storage.AlmacenParqueo) {
 		DeleteVisita(w, req, store)
 	})
  
-	// --- Bitácora de accesos de vehículos de residentes ---
+	// Bitácora de accesos de vehículos de residentes 
 	r.Get("/accesos", func(w http.ResponseWriter, req *http.Request) {
 		GetAllAccesos(w, req, store)
 	})
@@ -76,3 +76,101 @@ func MontarRutasParqueo(r chi.Router, store storage.AlmacenParqueo) {
 		DeleteAcceso(w, req, store)
 	})
 }
+
+//Handlers de Vehículos de residentes
+//GetAllVehiculos atiende GET /api/v1/vehiculos
+func GetAllVehiculos(w http.ResponseWriter, r *http.Request, store storage.AlmacenParqueo) {
+	vehiculos := store.ListarVehiculos()
+	RespondJSON(w, http.StatusOK, vehiculos)
+}
+
+//GetVehiculo atiende GET /api/v1/vehiculos/{id}
+func GetVehiculo(w http.ResponseWriter, r *http.Request, store storage.AlmacenParqueo) {
+	id, ok := parseID(r)
+	if !ok {
+		RespondError(w, http.StatusBadRequest, "ID debe ser un número entero positivo")
+		return
+	}
+
+	vehiculo, encontrado := store.BuscarVehiculoPorID(id)
+	if !encontrado {
+		RespondError(w, http.StatusNotFound, "vehiculo no encontrado")
+		return
+	}
+	RespondJSON(w, http.StatusOK, vehiculo)
+}
+
+//CreateVehiculo atiende POST /api/v1/vehiculos
+func CreateVehiculo(w http.ResponseWriter, r *http.Request, store storage.AlmacenParqueo) {
+	var body models.Vehiculo
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		RespondError(w, http.StatusBadRequest, "JSON inválido"+err.Error())
+		return
+	}
+
+	if body.ResidenteID == 0 {
+		RespondError(w, http.StatusBadRequest, "residente_id es requerido")
+		return
+	}
+
+	if  strings.TrimSpace(body.Placa) == "" {
+		RespondError(w, http.StatusBadRequest, "placa es requerida")
+		return
+	}
+
+	if strings.TrimSpace(body.Marca) == "" {
+		RespondError(w, http.StatusBadRequest, "marca es requerida")
+		return
+	}
+
+	body.Activo = true
+	body.CreatedAt = time.Now()
+
+	vehiculoCreado := store.CrearVehiculo(body)
+	RespondJSON(w, http.StatusCreated, vehiculoCreado)
+}
+
+//UpdateVehiculo atiende PUT /api/v1/vehiculos/{id}
+func UpdateVehiculo(w http.ResponseWriter, r *http.Request, store storage.AlmacenParqueo) {
+	id, ok := parseID(r)
+	if !ok {
+		RespondError(w, http.StatusBadRequest, "ID debe ser un número entero positivo")
+		return
+	}
+
+	var body models.Vehiculo
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		RespondError(w, http.StatusBadRequest, "JSON inválido"+err.Error())
+		return
+	}
+
+	if strings.TrimSpace(body.Placa) == "" {
+		RespondError(w, http.StatusBadRequest, "placa es requerida")
+		return
+	}
+
+	vehiculo, encontrado := store.ActualizarVehiculo(id, body)
+	if !encontrado {
+		RespondError(w, http.StatusNotFound, "vehiculo no encontrado")
+		return
+	}
+
+	RespondJSON(w, http.StatusOK, vehiculo)
+}
+
+//DeleteVehiculo atiende DELETE /api/v1/vehiculos/{id}
+func DeleteVehiculo(w http.ResponseWriter, r *http.Request, store storage.AlmacenParqueo) {
+	id, ok := parseID(r)
+	if !ok {
+		RespondError(w, http.StatusBadRequest, "ID debe ser un número entero positivo")
+		return
+	}
+
+	if !store.BorrarVehiculo(id) {
+		RespondError(w, http.StatusNotFound, "vehiculo no encontrado")
+		return
+	}
+
+	RespondJSON(w, http.StatusNoContent, nil)
+}
+
