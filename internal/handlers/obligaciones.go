@@ -184,9 +184,7 @@ func DeleteObligacion(w http.ResponseWriter, r *http.Request, store storage.Alma
 	RespondJSON(w, http.StatusOK, map[string]string{"mensaje": "obligacion eliminada"})
 }
 
-// =========================================================
-// MULTAS
-// =========================================================
+// MULTAS, cada función atiende un endpoint específico, valida la entrada, llama al store y responde con JSON o error según corresponda.
 
 // GetAllMultas atiende GET /api/v1/multas
 func GetAllMultas(w http.ResponseWriter, r *http.Request, store storage.AlmacenObligaciones) {
