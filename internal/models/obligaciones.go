@@ -3,10 +3,10 @@ package models
 import "time"
 
 type Obligacion struct {
-	ID               uint       `json:"id"` // Identificador único de la obligación
+	ID               uint       `json:"id"` // Identificador único de la obligación, uint es para evitar problemas con IDs negativos
 	ResidenteID      uint       `json:"residente_id"`
-	Tipo             string     `json:"tipo"` // "mensual", "extraordinaria"
-	Monto            float64    `json:"monto"`
+	Tipo             string     `json:"tipo"`    // "mensual", "extraordinaria"
+	Monto            float64    `json:"monto"`   // Monto de la obligación
 	Periodo          string     `json:"periodo"` // Formato "YYYY-MM"
 	Estado           string     `json:"estado"`  // "pendiente", "pagada", "vencida"
 	FechaEmision     time.Time  `json:"fecha_emision"`

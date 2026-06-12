@@ -13,9 +13,7 @@ import (
 	"condominio-api/internal/storage"
 )
 
-// =========================================================
-// ROUTER
-// =========================================================
+// ROUTER, basicamente asigna cada endpoint a su función handler correspondiente, pasando el store para acceso a datos.
 
 func MontarRutasAlicuotas(r chi.Router, store storage.AlmacenObligaciones) {
 
@@ -66,9 +64,7 @@ func parseIDAlicuotas(r *http.Request) (uint, bool) {
 	return id, true
 }
 
-// =========================================================
-// OBLIGACIONES
-// =========================================================
+// OBLIGACIONES, cada función atiende un endpoint específico, valida la entrada, llama al store y responde con JSON o error según corresponda.
 
 // GetAllObligaciones atiende GET /api/v1/obligaciones
 func GetAllObligaciones(w http.ResponseWriter, r *http.Request, store storage.AlmacenObligaciones) {
