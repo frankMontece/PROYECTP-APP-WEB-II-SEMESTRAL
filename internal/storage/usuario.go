@@ -1,7 +1,7 @@
 package storage
 
 import (
-	"cafeteria-uleam-api/internal/models"
+	"condominio-api/internal/models"
 	"time"
 
 	"gorm.io/gorm"
