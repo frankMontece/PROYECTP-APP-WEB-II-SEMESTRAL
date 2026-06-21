@@ -35,4 +35,9 @@ type AlmacenParqueo interface {
 	AccesosRepository
 }
 
+type UserRepository interface {
+	CrearUsuario(u models.Usuario) (models.Usuario, error)
+	BuscarUsuarioPorEmail(email string) (models.Usuario, bool)
+}
+
 var _ AlmacenParqueo = (*MemoriaParqueo)(nil)
