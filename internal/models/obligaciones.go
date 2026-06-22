@@ -11,7 +11,7 @@ type Obligacion struct {
 	Estado           string     `json:"estado"`  // "pendiente", "pagada", "vencida"
 	FechaEmision     time.Time  `json:"fecha_emision"`
 	FechaVencimiento time.Time  `json:"fecha_vencimiento"`
-	FechaPago        *time.Time `json:"fecha_pago,omitempty"`
+	FechaPago        *time.Time `json:"fecha_pago,omitempty"` // Fecha de pago, nula si no se ha pagado, se usa puntero para permitir nulo
 	Comprobante      string     `json:"comprobante,omitempty"`
 	MoraCalculada    float64    `json:"mora_calculada"`
 }
@@ -25,5 +25,5 @@ type Multa struct {
 	Monto        float64    `json:"monto"`
 	Estado       string     `json:"estado"` // "pendiente", "pagada", "apelada"
 	FechaEmision time.Time  `json:"fecha_emision"`
-	FechaPago    *time.Time `json:"fecha_pago,omitempty"`
+	FechaPago    *time.Time `json:"fecha_pago,omitempty"` // Fecha de pago, nula si no se ha pagado, se usa puntero para permitir nulo
 }
