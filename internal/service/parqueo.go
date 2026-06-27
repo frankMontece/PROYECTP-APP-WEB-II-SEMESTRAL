@@ -9,9 +9,7 @@ import (
 	"condominio-api/internal/storage"
 )
 
-// =================================================================
 // VEHICULO SERVICE
-// =================================================================
 
 type VehiculoService struct {
 	repo storage.VehiculosRepository
@@ -74,9 +72,7 @@ func validarVehiculo(v models.Vehiculo) error {
 	return nil
 }
 
-// =================================================================
 // VISITA SERVICE
-// =================================================================
 
 type VisitaService struct {
 	repo storage.VisitasRepository
@@ -153,9 +149,7 @@ func validarVisita(vis models.VisitaVehiculo) error {
 	return nil
 }
 
-// =================================================================
 // ACCESO SERVICE
-// =================================================================
 
 type AccesoService struct {
 	repo storage.AccesosRepository
