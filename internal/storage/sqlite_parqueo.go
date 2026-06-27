@@ -68,9 +68,7 @@ func (s *SQLiteParqueo) SembrarVacio() {
 	s.db.Create(&accesos)
 }
 
-// =================================================================
 // VEHICULOS
-// =================================================================
 
 func (s *SQLiteParqueo) ListarVehiculos() []models.Vehiculo {
 	var vehiculos []models.Vehiculo
@@ -107,9 +105,7 @@ func (s *SQLiteParqueo) BorrarVehiculo(id uint) bool {
 	return res.RowsAffected > 0
 }
 
-// =================================================================
 // VISITAS
-// =================================================================
 
 func (s *SQLiteParqueo) ListarVisitas() []models.VisitaVehiculo {
 	var visitas []models.VisitaVehiculo
@@ -160,9 +156,7 @@ func (s *SQLiteParqueo) BorrarVisita(id uint) bool {
 	return res.RowsAffected > 0
 }
 
-// =================================================================
 // ACCESOS
-// =================================================================
 
 func (s *SQLiteParqueo) ListarAccesos() []models.AccesoVehiculo {
 	var accesos []models.AccesoVehiculo
