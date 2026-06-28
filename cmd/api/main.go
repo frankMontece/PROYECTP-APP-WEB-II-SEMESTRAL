@@ -55,29 +55,12 @@ func main() {
 
 	// 7. Rutas /api/v1.
 	r.Route("/api/v1", func(r chi.Router) {
-		r.Post("/auth/register", servidor.Registrar)
-		r.Post("/auth/login", servidor.Login)
+		servidor.MontarRutasAuth(r)
 
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.Auth(authService))
 
-			r.Get("/vehiculos", servidor.ListarVehiculos)
-			r.Post("/vehiculos", servidor.CrearVehiculo)
-			r.Get("/vehiculos/{id}", servidor.ObtenerVehiculo)
-			r.Put("/vehiculos/{id}", servidor.ActualizarVehiculo)
-			r.Delete("/vehiculos/{id}", servidor.BorrarVehiculo)
-
-			r.Get("/visitas", servidor.ListarVisitas)
-			r.Post("/visitas", servidor.CrearVisita)
-			r.Get("/visitas/{id}", servidor.ObtenerVisita)
-			r.Put("/visitas/{id}", servidor.ActualizarVisita)
-			r.Post("/visitas/{id}/salida", servidor.RegistrarSalida)
-			r.Delete("/visitas/{id}", servidor.BorrarVisita)
-
-			r.Get("/accesos", servidor.ListarAccesos)
-			r.Post("/accesos", servidor.CrearAcceso)
-			r.Get("/accesos/{id}", servidor.ObtenerAcceso)
-			r.Delete("/accesos/{id}", servidor.BorrarAcceso)
+			servidor.MontarRutasParqueo(r)
 		})
 	})
 
