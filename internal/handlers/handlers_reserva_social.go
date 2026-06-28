@@ -13,7 +13,7 @@ import (
 
 // ListarReservas maneja GET /api/v1/reservas-areas
 func (s *Server) ListarReservas(w http.ResponseWriter, r *http.Request) {
-	reservas := s.Social.ListarReservas()
+	reservas := s.Reserva.ListarReservas() // ← Usa ReservaService
 	RespondJSON(w, http.StatusOK, reservas)
 }
 
@@ -25,7 +25,7 @@ func (s *Server) GetReserva(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	reserva, err := s.Social.ObtenerReserva(uint(id))
+	reserva, err := s.Reserva.ObtenerReserva(uint(id))
 	if err != nil {
 		RespondError(w, statusDeError(err), err.Error())
 		return
@@ -41,7 +41,7 @@ func (s *Server) CreateReserva(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	creada, err := s.Social.CrearReserva(body)
+	creada, err := s.Reserva.CrearReserva(body)
 	if err != nil {
 		RespondError(w, statusDeError(err), err.Error())
 		return
@@ -63,7 +63,7 @@ func (s *Server) UpdateReserva(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	actualizada, err := s.Social.ActualizarReserva(uint(id), body)
+	actualizada, err := s.Reserva.ActualizarReserva(uint(id), body)
 	if err != nil {
 		RespondError(w, statusDeError(err), err.Error())
 		return
@@ -79,7 +79,7 @@ func (s *Server) DeleteReserva(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := s.Social.BorrarReserva(uint(id)); err != nil {
+	if err := s.Reserva.BorrarReserva(uint(id)); err != nil {
 		RespondError(w, statusDeError(err), err.Error())
 		return
 	}

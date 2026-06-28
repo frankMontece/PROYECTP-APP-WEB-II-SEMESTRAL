@@ -13,7 +13,7 @@ import (
 
 // ListarAreas maneja GET /api/v1/areas-sociales
 func (s *Server) ListarAreas(w http.ResponseWriter, r *http.Request) {
-	areas := s.Social.ListarAreas()
+	areas := s.Area.ListarAreas() // ← Usa AreaService
 	RespondJSON(w, http.StatusOK, areas)
 }
 
@@ -25,7 +25,7 @@ func (s *Server) GetArea(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	area, err := s.Social.ObtenerArea(uint(id))
+	area, err := s.Area.ObtenerArea(uint(id))
 	if err != nil {
 		RespondError(w, statusDeError(err), err.Error())
 		return
@@ -41,7 +41,7 @@ func (s *Server) CreateArea(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	creada, err := s.Social.CrearArea(body)
+	creada, err := s.Area.CrearArea(body)
 	if err != nil {
 		RespondError(w, statusDeError(err), err.Error())
 		return
@@ -63,7 +63,7 @@ func (s *Server) UpdateArea(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	actualizada, err := s.Social.ActualizarArea(uint(id), body)
+	actualizada, err := s.Area.ActualizarArea(uint(id), body)
 	if err != nil {
 		RespondError(w, statusDeError(err), err.Error())
 		return
@@ -79,7 +79,7 @@ func (s *Server) DeleteArea(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := s.Social.BorrarArea(uint(id)); err != nil {
+	if err := s.Area.BorrarArea(uint(id)); err != nil {
 		RespondError(w, statusDeError(err), err.Error())
 		return
 	}

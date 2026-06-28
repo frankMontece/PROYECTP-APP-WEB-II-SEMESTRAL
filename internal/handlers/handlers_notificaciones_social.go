@@ -13,7 +13,7 @@ import (
 
 // ListarNotificaciones maneja GET /api/v1/notificaciones
 func (s *Server) ListarNotificaciones(w http.ResponseWriter, r *http.Request) {
-	notificaciones := s.Social.ListarNotificaciones()
+	notificaciones := s.Notificacion.ListarNotificaciones() // ← Usa NotificacionService
 	RespondJSON(w, http.StatusOK, notificaciones)
 }
 
@@ -25,7 +25,7 @@ func (s *Server) GetNotificacion(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	notif, err := s.Social.ObtenerNotificacion(uint(id))
+	notif, err := s.Notificacion.ObtenerNotificacion(uint(id))
 	if err != nil {
 		RespondError(w, statusDeError(err), err.Error())
 		return
@@ -41,7 +41,7 @@ func (s *Server) CreateNotificacion(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	creada, err := s.Social.CrearNotificacion(body)
+	creada, err := s.Notificacion.CrearNotificacion(body)
 	if err != nil {
 		RespondError(w, statusDeError(err), err.Error())
 		return
@@ -57,7 +57,7 @@ func (s *Server) MarcarLeida(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	notif, err := s.Social.MarcarLeida(uint(id))
+	notif, err := s.Notificacion.MarcarLeida(uint(id))
 	if err != nil {
 		RespondError(w, statusDeError(err), err.Error())
 		return
@@ -73,7 +73,7 @@ func (s *Server) DeleteNotificacion(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := s.Social.BorrarNotificacion(uint(id)); err != nil {
+	if err := s.Notificacion.BorrarNotificacion(uint(id)); err != nil {
 		RespondError(w, statusDeError(err), err.Error())
 		return
 	}

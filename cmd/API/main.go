@@ -17,50 +17,58 @@ import (
 )
 
 func main() {
-	// ── 1. Conectar a SQLite ──────────────────────────────────────────────
-	gdb, err := gorm.Open(sqlite.Open("condominio.db"), &gorm.Config{})
+	// 1. Conectar a SQLite y migrar esquema.
+	db, err := gorm.Open(sqlite.Open("condominio.db"), &gorm.Config{})
 	if err != nil {
-		log.Fatal("no se pudo abrir la base de datos: ", err)
+		log.Fatal("Error al conectar a la base de datos:", err)
 	}
-	log.Println("Conectado a SQLite")
-
-	// ── 2. AutoMigrate ─────────────────────────────────────────────────────
-	if err := gdb.AutoMigrate(
+	if err := db.AutoMigrate(
 		&models.Usuario{},
 		&models.AreaSocial{},
 		&models.ReservaArea{},
 		&models.Notificacion{},
 	); err != nil {
-		log.Fatal("falló AutoMigrate: ", err)
+		log.Fatal("Error al migrar la base de datos:", err)
 	}
-	log.Println("Migraciones aplicadas")
 
-	// ── 3. Repositorios (Storage) ──────────────────────────────────────────
-	socialRepo := storage.NewSocialGORM(gdb)
-	usuarioRepo := storage.NewUsuarioGORM(gdb)
+	// 2. Sembrar datos iniciales (solo si están vacíos).
+	storage.SembrarSocial(db) // ← Función separada
 
-	// ── 4. Servicios (Service) ─────────────────────────────────────────────
-	authService := service.NewAuthService(usuarioRepo)
-	socialService := service.NewSocialService(socialRepo, socialRepo, socialRepo)
+	// 3. Repositorios (cada uno con su propia implementación SQLite).
+	userRepo := storage.NewUsuarioGORM(db)
+	areaRepo := storage.NewAreaSQLite(db)                 // ← Repositorio de áreas
+	reservaRepo := storage.NewReservaSQLite(db)           // ← Repositorio de reservas
+	notificacionRepo := storage.NewNotificacionSQLite(db) // ← Repositorio de notificaciones
 
-	// ── 5. Server (Handlers) ──────────────────────────────────────────────
-	servidor := handlers.NewServer(socialService, authService)
+	// 4. Servicios (lógica de negocio + validaciones) - SEGMENTADOS.
+	authService := service.NewAuthService(userRepo)
+	areaService := service.NewAreaService(areaRepo)
+	reservaService := service.NewReservaService(reservaRepo)
+	notificacionService := service.NewNotificacionService(notificacionRepo)
 
-	// ── 6. Router ──────────────────────────────────────────────────────────
+	// 5. Servidor (handlers HTTP).
+	servidor := handlers.NewServer(
+		authService,
+		areaService,
+		reservaService,
+		notificacionService,
+	)
+
+	// 6. Router.
 	r := chi.NewRouter()
 
-	// Middleware global
+	// 7. Middleware global.
 	r.Use(chimw.Logger)
 	r.Use(chimw.Recoverer)
 	r.Use(middleware.CORS)
 
-	// ── 7. Rutas ──────────────────────────────────────────────────────────
+	// 8. Rutas /api/v1.
 	r.Route("/api/v1", func(r chi.Router) {
-		// Rutas públicas (sin autenticación)
+		// Rutas públicas
 		r.Post("/auth/register", servidor.Registrar)
 		r.Post("/auth/login", servidor.Login)
 
-		// Rutas protegidas (requieren JWT)
+		// Rutas protegidas con JWT
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.Auth(authService))
 
@@ -69,8 +77,7 @@ func main() {
 		})
 	})
 
-	// ── 8. Arrancar el servidor ──────────────────────────────────────────
 	log.Println("=== Módulo B — Área Social y Notificaciones (Hito 3) ===")
-	log.Println("Servidor escuchando en http://localhost:8080")
+	log.Println("🚀 Servidor escuchando en http://localhost:8080")
 	log.Fatal(http.ListenAndServe(":8080", r))
 }

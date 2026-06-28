@@ -7,9 +7,7 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-// parseUintID extrae y valida el parámetro {id} de la URL.
-// Devuelve (id, true) si es válido o (0, false) si no lo es.
-// Se mantiene para compatibilidad con otros módulos que puedan usarlo.
+// parseUintID extrae y valida el parámetro {id} de la URL
 func parseUintID(r *http.Request) (uint, bool) {
 	idStr := chi.URLParam(r, "id")
 	id64, err := strconv.ParseUint(idStr, 10, 64)
@@ -19,8 +17,8 @@ func parseUintID(r *http.Request) (uint, bool) {
 	return uint(id64), true
 }
 
-// MontarRutasSocial registra todas las rutas del Módulo B en el router dado.
-// Versión actualizada para usar el Server con handlers delgados.
+// MontarRutasSocial registra todas las rutas del Módulo B
+// Usa los handlers que llaman a servicios específicos
 func MontarRutasSocial(r chi.Router, s *Server) {
 	// ── Áreas Sociales ─────────────────────────────────────────────────────
 	r.Get("/areas-sociales", s.ListarAreas)
