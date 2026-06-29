@@ -6,9 +6,6 @@ import (
 	"condominio-api/internal/models"
 )
 
-// mockObligacionRepo es un doble de prueba — implementa ObligacionRepository
-// pero no toca ninguna base de datos real. Solo guarda en un slice en RAM
-// para poder verificar si CrearObligacion llegó a llamarlo o no.
 type mockObligacionRepo struct {
 	obligaciones []models.Obligacion
 }
@@ -40,11 +37,6 @@ func (m *mockObligacionRepo) BorrarObligacion(id uint) bool {
 	return false // no se usa en este test
 }
 
-// TestCrearObligacion_RechazaMontoInvalido prueba una regla de negocio real:
-// un monto <= 0 NUNCA debe llegar al repositorio.
-// Qué se rompería si fallara: si alguien borra el "if o.Monto <= 0" del
-// service, este test falla porque el mock terminaría con 1 elemento
-// guardado en lugar de 0 — la validación dejaría de proteger los datos.
 func TestCrearObligacion_RechazaMontoInvalido(t *testing.T) {
 	mockRepo := &mockObligacionRepo{}
 	svc := NewObligacionesService(mockRepo)

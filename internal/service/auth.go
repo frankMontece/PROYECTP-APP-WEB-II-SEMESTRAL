@@ -15,15 +15,11 @@ var secretJWT = []byte("condominio-dev-secret-2026")
 
 const duracionToken = 2 * time.Hour
 
-// Claims define la carga útil del token JWT.
-// Embebe jwt.RegisteredClaims para tener ExpiresAt, IssuedAt, etc.
 type Claims struct {
 	UsuarioID int `json:"usuario_id"`
 	jwt.RegisteredClaims
 }
 
-// AuthService encapsula toda la lógica de autenticación.
-// Depende de UserRepository (interfaz), no del tipo concreto.
 type AuthService struct {
 	repo storage.UserRepository
 }

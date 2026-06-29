@@ -13,9 +13,6 @@ import (
 	"condominio-api/internal/service"
 )
 
-// fakeObligacionRepo SÍ guarda datos (a diferencia del mock del Test 1),
-// pero en un slice en memoria — nunca toca SQLite real. Por eso es un
-// "fake", no un mock: simula el comportamiento completo, no solo verifica una llamada.
 type fakeObligacionRepo struct {
 	obligaciones []models.Obligacion
 }
@@ -44,13 +41,9 @@ func (f *fakeObligacionRepo) ActualizarObligacion(id uint, datos models.Obligaci
 }
 
 func (f *fakeObligacionRepo) BorrarObligacion(id uint) bool {
-	return false // no usado en estos tests
+	return false
 }
 
-// TestCreateObligacion_DevuelveCreated prueba el camino feliz del handler:
-// con datos válidos, debe responder 201 Created.
-// Llama directo al handler (sin pasar por router ni middleware) — es un
-// test aislado de la función CreateObligacion únicamente.
 func TestCreateObligacion_DevuelveCreated(t *testing.T) {
 	fake := &fakeObligacionRepo{}
 	svc := service.NewObligacionesService(fake)
@@ -74,11 +67,6 @@ func TestCreateObligacion_DevuelveCreated(t *testing.T) {
 	}
 }
 
-// TestObligaciones_SinToken_Devuelve401 prueba que una ruta protegida
-// SIN el header Authorization responde 401. A diferencia del test anterior,
-// aquí se monta un router chi real con un middleware simulado, porque
-// el 401 no lo genera el handler — lo genera el middleware ANTES de llegar
-// al handler. Por eso este test pasa por el router completo.
 func TestObligaciones_SinToken_Devuelve401(t *testing.T) {
 	fake := &fakeObligacionRepo{}
 	svc := service.NewObligacionesService(fake)
@@ -87,9 +75,6 @@ func TestObligaciones_SinToken_Devuelve401(t *testing.T) {
 	r := chi.NewRouter()
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Group(func(r chi.Router) {
-			// Simulación del middleware real (internal/middelware/auth.go):
-			// la misma lógica — sin header Authorization, corta con 401
-			// y nunca llama a next.ServeHTTP.
 			r.Use(func(next http.Handler) http.Handler {
 				return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 					if req.Header.Get("Authorization") == "" {
