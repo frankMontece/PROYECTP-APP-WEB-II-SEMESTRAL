@@ -9,6 +9,7 @@ import (
 	"gorm.io/gorm"
 )
 
+//creacion de la db
 func TestAreaSQLite_CrearYBuscar(t *testing.T) {
 	// Preparar — base de datos desechable en memoria
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
@@ -16,9 +17,9 @@ func TestAreaSQLite_CrearYBuscar(t *testing.T) {
 		t.Fatalf("no se pudo abrir SQLite :memory: → %v", err)
 	}
 	db.AutoMigrate(&models.AreaSocial{})
-
 	repo := NewAreaSQLite(db)
 
+	//preparacion de la entrada
 	entrada := models.AreaSocial{
 		Nombre:    "Sala de Reuniones",
 		Capacidad: 20,
@@ -27,12 +28,10 @@ func TestAreaSQLite_CrearYBuscar(t *testing.T) {
 
 	// Ejecutar
 	creada := repo.CrearArea(entrada)
-
 	// Verificar — el ID fue asignado por GORM
 	if creada.ID == 0 {
 		t.Fatal("GORM no asignó ID al área creada")
 	}
-
 	encontrada, ok := repo.BuscarAreaPorID(creada.ID)
 	if !ok {
 		t.Fatalf("BuscarAreaPorID(%d) devolvió false", creada.ID)
