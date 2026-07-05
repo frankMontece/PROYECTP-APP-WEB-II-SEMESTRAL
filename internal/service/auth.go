@@ -11,25 +11,30 @@ import (
 	"condominio-api/internal/storage"
 )
 
-var secretJWT = []byte("condominio-dev-secret-2026")
-
-const duracionToken = 2 * time.Hour
-
 // Claims define la carga útil del token JWT.
-// Embebe jwt.RegisteredClaims para tener ExpiresAt, IssuedAt, etc.
 type Claims struct {
 	UsuarioID int `json:"usuario_id"`
 	jwt.RegisteredClaims
 }
 
 // AuthService encapsula toda la lógica de autenticación.
-// Depende de UserRepository (interfaz), no del tipo concreto.
 type AuthService struct {
-	repo storage.UserRepository
+	repo          storage.UserRepository
+	secretJWT     []byte
+	duracionToken time.Duration
 }
 
-func NewAuthService(repo storage.UserRepository) *AuthService {
-	return &AuthService{repo: repo}
+// Constructor.
+func NewAuthService(
+	repo storage.UserRepository,
+	secret []byte,
+	duracion time.Duration,
+) *AuthService {
+	return &AuthService{
+		repo:          repo,
+		secretJWT:     secret,
+		duracionToken: duracion,
+	}
 }
 
 // Registrar valida los datos, hashea la contraseña y crea el usuario.
@@ -55,7 +60,7 @@ func (s *AuthService) Registrar(email, password string) (models.Usuario, error) 
 	})
 }
 
-// Login verifica las credenciales y devuelve un token JWT firmado.
+// Login verifica las credenciales y devuelve un JWT.
 func (s *AuthService) Login(email, password string) (string, error) {
 	email = strings.TrimSpace(email)
 	password = strings.TrimSpace(password)
@@ -69,7 +74,6 @@ func (s *AuthService) Login(email, password string) (string, error) {
 		return "", ErrCredencialesInvalidas
 	}
 
-	// bcrypt.CompareHashAndPassword devuelve nil si coinciden
 	if err := bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(password)); err != nil {
 		return "", ErrCredencialesInvalidas
 	}
@@ -77,28 +81,32 @@ func (s *AuthService) Login(email, password string) (string, error) {
 	return s.GenerarToken(u)
 }
 
-// GenerarToken crea y firma un JWT con el ID del usuario.
-// Se expone por separado para poder reutilizarla en tests o renovación de tokens.
+// Genera un JWT firmado.
 func (s *AuthService) GenerarToken(u models.Usuario) (string, error) {
 	claims := &Claims{
 		UsuarioID: u.ID,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(duracionToken)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(s.duracionToken)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
 	}
+
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(secretJWT)
+
+	return token.SignedString(s.secretJWT)
 }
 
-// ValidarToken parsea el token, verifica la firma y devuelve el UsuarioID.
+// Verifica un JWT.
 func (s *AuthService) ValidarToken(tokenStr string) (int, error) {
 	parsedToken, err := jwt.ParseWithClaims(tokenStr, &Claims{}, func(t *jwt.Token) (any, error) {
+
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, ErrCredencialesInvalidas
 		}
-		return secretJWT, nil
+
+		return s.secretJWT, nil
 	})
+
 	if err != nil || !parsedToken.Valid {
 		return 0, ErrCredencialesInvalidas
 	}
@@ -107,5 +115,6 @@ func (s *AuthService) ValidarToken(tokenStr string) (int, error) {
 	if !ok {
 		return 0, ErrCredencialesInvalidas
 	}
+
 	return claims.UsuarioID, nil
 }
