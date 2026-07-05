@@ -9,6 +9,8 @@ import (
 
 type Config struct {
 	Puerto       string
+	DBDriver     string
+	DBDSN        string
 	RutaDB       string
 	JWTSecreto   []byte
 	JWTDuracion  time.Duration
@@ -21,6 +23,8 @@ func Cargar() Config {
 
 	return Config{
 		Puerto:       conTexto("PUERTO", ":8080"),
+		DBDriver:     conTexto("DB_DRIVER", "sqlite3"),
+		DBDSN:        conTexto("DB_DSN", ""),
 		RutaDB:       conTexto("RUTA_DB", "condominio.db"),
 		JWTSecreto:   []byte(conTexto("JWT_SECRETO", "condominio-dev-secret-2026")),
 		JWTDuracion:  conDuracion("JWT_DURACION", 24*time.Hour),
