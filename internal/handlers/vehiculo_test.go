@@ -1,9 +1,6 @@
 package handlers_test
 
 // Patrón: handler con httptest + fake en memoria
-// httptest.NewRequest / httptest.NewRecorder simulan HTTP sin abrir un puerto.
-// El fake (fakeAlmacenParqueo) sí guarda datos pero no es la base real.
-// Un test verifica 201 con token; el otro verifica 401 sin token.
 
 import (
 	"bytes"
@@ -11,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
@@ -23,10 +21,6 @@ import (
 )
 
 // ── Fake del repositorio de usuarios ──
-// Necesario para crear el AuthService en los tests.
-// BuscarUsuarioPorEmail siempre devuelve false: no hay usuarios registrados.
-// Eso está bien porque en los tests generamos el token directamente con
-// authService.GenerarToken, sin pasar por login.
 
 type fakeUserRepo struct{}
 
@@ -40,9 +34,6 @@ func (f *fakeUserRepo) BuscarUsuarioPorEmail(email string) (models.Usuario, bool
 }
 
 // ── Fake del almacén de parqueo ──
-// Implementa storage.AlmacenParqueo en memoria.
-// Los métodos de Visitas y Accesos están vacíos porque este archivo
-// solo prueba handlers de Vehiculos.
 
 type fakeAlmacenParqueo struct {
 	vehiculos []models.Vehiculo
@@ -111,21 +102,21 @@ func (f *fakeAlmacenParqueo) BuscarAccesoPorID(id uint) (models.AccesoVehiculo, 
 func (f *fakeAlmacenParqueo) CrearAcceso(a models.AccesoVehiculo) models.AccesoVehiculo { return a }
 func (f *fakeAlmacenParqueo) BorrarAcceso(id uint) bool                                 { return false }
 
-// ── Helper: construye router + devuelve token de prueba ───────────────────────
-// Se llama en cada test para arrancar desde un estado limpio.
-// El token se genera directamente con GenerarToken, sin pasar por login.
+// ── Helper: construye router + devuelve token de prueba ──
 
 func setupRouter(t *testing.T) (*chi.Mux, string) {
 	t.Helper()
 
 	fake := &fakeAlmacenParqueo{}
-	authService := service.NewAuthService(&fakeUserRepo{})
+	authService := service.NewAuthService(&fakeUserRepo{}, []byte("test-secret"), 2*time.Hour)
 
 	servidor := handlers.NewServer(
-		authService,
-		service.NewVehiculoService(fake),
-		service.NewVisitaService(fake),
-		service.NewAccesoService(fake),
+		handlers.Services{
+			Auth:      authService,
+			Vehiculos: service.NewVehiculoService(fake),
+			Visitas:   service.NewVisitaService(fake),
+			Accesos:   service.NewAccesoService(fake),
+		},
 	)
 
 	// Token válido de prueba: usuario con ID 1, sin contraseña real
@@ -180,10 +171,7 @@ func TestCrearVehiculo_ConToken_201(t *testing.T) {
 	assert.NotZero(t, respuesta.ID)  // el fake asigna un ID
 }
 
-// ── Test 2: POST /vehiculos SIN token → 401 ───────────────────────────────────
-// Este test verifica que el middleware Auth está activo en la ruta.
-// Sin header Authorization, el middleware corta la cadena y devuelve 401
-// ANTES de que el handler se ejecute.
+// ── Test 2: POST /vehiculos SIN token → 401 ──
 
 func TestCrearVehiculo_SinToken_401(t *testing.T) {
 	// Preparar
