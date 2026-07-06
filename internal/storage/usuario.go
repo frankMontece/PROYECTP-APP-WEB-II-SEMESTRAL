@@ -34,3 +34,5 @@ func (r *UsuarioGORM) BuscarUsuarioPorEmail(email string) (models.Usuario, bool)
 
 	return u, true
 }
+
+var _ UserRepository = (*UsuarioGORM)(nil)
