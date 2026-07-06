@@ -75,7 +75,10 @@ func nuevoRouterDeTest(t *testing.T) (chi.Router, *service.AuthService) {
 	}
 	areaSvc := service.NewAreaService(areaRepo)
 
-	srv := NewServer(authSvc, areaSvc, nil, nil)
+	srv := NewServer(Deps{
+		Auth: authSvc,
+		Area: areaSvc,
+	})
 
 	r := chi.NewRouter()
 	r.Route("/api/v1", func(r chi.Router) {

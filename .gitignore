@@ -1,0 +1,14 @@
+# Variables de entorno (contiene secretos reales, nunca se sube)
+.env
+
+# Base de datos local
+*.db
+
+# Binarios compilados
+/bin/
+condominio-api
+condominio-api.exe
+
+# Archivos de IDE
+.vscode/
+.idea/
