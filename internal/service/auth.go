@@ -11,21 +11,29 @@ import (
 	"condominio-api/internal/storage"
 )
 
-var secretJWT = []byte("condominio-dev-secret-2026")
-
-const duracionToken = 2 * time.Hour
-
+// Claims define la carga útil del token JWT.
 type Claims struct {
 	UsuarioID int `json:"usuario_id"`
 	jwt.RegisteredClaims
 }
 
+// AuthService encapsula toda la lógica de autenticación.
+// El secreto y la duración ya no son variables globales hardcodeadas —
+// vienen de config.Config y se inyectan al construir el service.
 type AuthService struct {
-	repo storage.UserRepository
+	repo     storage.UserRepository
+	secreto  []byte
+	duracion time.Duration
 }
 
-func NewAuthService(repo storage.UserRepository) *AuthService {
-	return &AuthService{repo: repo}
+// NewAuthService recibe el repo + secreto + duración desde config.
+// Antes el secreto era una var global en este mismo archivo.
+func NewAuthService(repo storage.UserRepository, secreto []byte, duracion time.Duration) *AuthService {
+	return &AuthService{
+		repo:     repo,
+		secreto:  secreto,
+		duracion: duracion,
+	}
 }
 
 // Registrar valida los datos, hashea la contraseña y crea el usuario.
@@ -65,7 +73,6 @@ func (s *AuthService) Login(email, password string) (string, error) {
 		return "", ErrCredencialesInvalidas
 	}
 
-	// bcrypt.CompareHashAndPassword devuelve nil si coinciden
 	if err := bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(password)); err != nil {
 		return "", ErrCredencialesInvalidas
 	}
@@ -74,17 +81,16 @@ func (s *AuthService) Login(email, password string) (string, error) {
 }
 
 // GenerarToken crea y firma un JWT con el ID del usuario.
-// Se expone por separado para poder reutilizarla en tests o renovación de tokens.
 func (s *AuthService) GenerarToken(u models.Usuario) (string, error) {
 	claims := &Claims{
 		UsuarioID: u.ID,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(duracionToken)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(s.duracion)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(secretJWT)
+	return token.SignedString(s.secreto)
 }
 
 // ValidarToken parsea el token, verifica la firma y devuelve el UsuarioID.
@@ -93,7 +99,7 @@ func (s *AuthService) ValidarToken(tokenStr string) (int, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, ErrCredencialesInvalidas
 		}
-		return secretJWT, nil
+		return s.secreto, nil // usa el secreto del struct, no la variable global
 	})
 	if err != nil || !parsedToken.Valid {
 		return 0, ErrCredencialesInvalidas
