@@ -13,6 +13,8 @@ import (
 	"condominio-api/internal/service"
 )
 
+//Tiene dos tests: uno que prueba que crear una obligación válida responde "201 creado", y otro que prueba que si no mandas el token de seguridad, te rechaza con "401 no autorizado".
+
 type fakeObligacionRepo struct {
 	obligaciones []models.Obligacion
 }

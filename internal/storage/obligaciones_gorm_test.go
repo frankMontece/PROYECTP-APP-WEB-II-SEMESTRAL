@@ -1,5 +1,6 @@
 package storage_test
 
+//El test que prueba que esa conexión con la base de datos real funciona, crea un registro, lo busca, lo encuentra.
 import (
 	"testing"
 
