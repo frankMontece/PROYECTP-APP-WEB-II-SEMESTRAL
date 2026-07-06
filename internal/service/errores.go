@@ -3,8 +3,8 @@ package service
 import "errors"
 
 var (
-	ErrCredencialesInvalidas = errors.New("email o contraseña incorrectos")
-	ErrEmailEnUso            = errors.New("el email ya está registrado")
+	ErrCredencialesInvalida = errors.New("email o contraseña incorrectos")
+	ErrEmailEnUso           = errors.New("el email ya está registrado")
 )
 
 var (
