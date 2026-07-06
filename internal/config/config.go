@@ -16,6 +16,8 @@ import (
 // DB eran literales en main.go. Ahora hay UNA sola fuente de verdad.
 type Config struct {
 	Puerto       string        // puerto HTTP, ej ":8080"
+	DBDriver     string        // "sqlite" (default, local) o "postgres" (Docker)
+	DBDSN        string        // DSN de PostgreSQL, solo si DBDriver == "postgres"
 	RutaDB       string        // archivo SQLite, ej "condominio.db"
 	JWTSecreto   []byte        // clave para firmar/verificar JWT
 	JWTDuracion  time.Duration // validez del token
@@ -30,6 +32,8 @@ func Cargar() Config {
 
 	return Config{
 		Puerto:       conTexto("PUERTO", ":8080"),
+		DBDriver:     conTexto("DB_DRIVER", "sqlite"),
+		DBDSN:        conTexto("DB_DSN", ""),
 		RutaDB:       conTexto("RUTA_DB", "condominio.db"),
 		JWTSecreto:   []byte(conTexto("JWT_SECRETO", "condominio-dev-secret-2026")),
 		JWTDuracion:  conDuracion("JWT_DURACION", 2*time.Hour),

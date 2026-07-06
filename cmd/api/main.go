@@ -9,16 +9,13 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/glebarez/sqlite"
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
-	"gorm.io/gorm"
 
 	"condominio-api/internal/config"
 	"condominio-api/internal/handlers"
 	"condominio-api/internal/httpserver"
 	middleware "condominio-api/internal/middelware"
-	"condominio-api/internal/models"
 	"condominio-api/internal/service"
 	"condominio-api/internal/storage"
 )
@@ -31,25 +28,17 @@ func main() {
 }
 
 func run(cfg config.Config) error {
-	// 1. Abrir base de datos SQLite con GORM
-	gdb, err := gorm.Open(sqlite.Open(cfg.RutaDB), &gorm.Config{})
+	// 1-3. Base de datos + AutoMigrate + repositorios, vía factory.
+	// El factory decide sqlite/postgres según cfg.DBDriver.
+	recursos, err := storage.Inicializar(cfg.DBDriver, cfg.DBDSN, cfg.RutaDB)
 	if err != nil {
 		return err
 	}
+	defer recursos.Cerrar()
 
-	// 2. AutoMigrate — crea las tablas si no existen
-	if err := gdb.AutoMigrate(
-		&models.Usuario{},
-		&models.Obligacion{},
-		&models.Multa{},
-	); err != nil {
-		return err
-	}
-
-	// 3. Repositorios (capa de storage)
-	oblRepo := storage.NewObligacionesGORM(gdb)
-	multaRepo := storage.NewMultasGORM(gdb)
-	usuarioRepo := storage.NewUsuarioGORM(gdb)
+	oblRepo := recursos.Obligaciones
+	multaRepo := recursos.Multas
+	usuarioRepo := recursos.Usuarios
 
 	// 4. Services (lógica de negocio)
 	// El secreto JWT ahora viene de config, ya no es una variable global
