@@ -1,0 +1,19 @@
+# Levanta la API del sistema de gestión de condominios.
+# SQLite vive dentro del contenedor en un volumen persistente.
+# Para usar PostgreSQL en producción, cambiar DB_DRIVER y DB_DSN.
+services:
+  api:
+    build: .
+    environment:
+      PUERTO: ":8080"
+      RUTA_DB: "/data/condominio.db"
+      JWT_SECRETO: "cambia-esto-en-produccion"
+      JWT_DURACION: "2h"
+    ports:
+      - "8080:8080"
+    volumes:
+      # Volumen nombrado: la BD sobrevive a "docker compose down" (sin -v)
+      - dbdata:/data
+
+volumes:
+  dbdata:
