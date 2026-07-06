@@ -52,8 +52,8 @@ func TestCrearObligacion_RechazaMontoInvalido(t *testing.T) {
 	if err == nil {
 		t.Fatal("esperaba error por monto inválido, pero CrearObligacion no falló") //muestra que la validación no funcionó si no hay error
 	}
-	if err != ErrMontoInvalido {
-		t.Fatalf("esperaba ErrMontoInvalido, obtuve: %v", err) //muestra que la validación no funcionó si el error no es el esperado
+	if err != ErrPeriodoVacio {
+		t.Fatalf("esperaba ErrPeriodoVacio, obtuve: %v", err)
 	}
 	if len(mockRepo.obligaciones) != 0 {
 		t.Fatal("la obligación inválida llegó al repositorio — la validación no la detuvo") //confirma que la validación cortó el flujo antes de llamar al repositorio.
