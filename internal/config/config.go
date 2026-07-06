@@ -27,7 +27,7 @@ func Cargar() Config {
 		DBDSN:        conTexto("DB_DSN", ""),
 		RutaDB:       conTexto("RUTA_DB", "condominio.db"),
 		JWTSecreto:   []byte(conTexto("JWT_SECRETO", "condominio-dev-secret-2026")),
-		JWTDuracion:  conDuracion("JWT_DURACION", 24*time.Hour),
+		JWTDuracion:  conDuracion("JWT_DURACION", 2*time.Hour),
 		ReadTimeout:  conDuracion("HTTP_READ_TIMEOUT", 10*time.Second),
 		WriteTimeout: conDuracion("HTTP_WRITE_TIMEOUT", 10*time.Second),
 	}
