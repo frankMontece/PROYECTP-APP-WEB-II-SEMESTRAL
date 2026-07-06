@@ -4,53 +4,38 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/glebarez/sqlite"
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
-	"gorm.io/gorm"
 
 	"condominio-api/internal/config"
 	"condominio-api/internal/handlers"
 	"condominio-api/internal/middleware"
-	"condominio-api/internal/models"
 	"condominio-api/internal/service"
 	"condominio-api/internal/storage"
 )
 
 func main() {
-	// 1. Cargar configuración (.env + variables de entorno)
 	cfg := config.Cargar()
 
-	// 2. Conectar a SQLite y migrar esquema.
-	db, err := gorm.Open(sqlite.Open(cfg.RutaDB), &gorm.Config{})
+	recursos, err := storage.Inicializar(
+		cfg.DBDriver,
+		cfg.DBDSN,
+		cfg.RutaDB,
+	)
 	if err != nil {
-		log.Fatal("Error al conectar a la base de datos:", err)
+		log.Fatal(err)
 	}
+	defer recursos.Cerrar()
 
-	if err := db.AutoMigrate(
-		&models.Usuario{},
-		&models.Vehiculo{},
-		&models.VisitaVehiculo{},
-		&models.AccesoVehiculo{},
-	); err != nil {
-		log.Fatal("Error al migrar la base de datos:", err)
-	}
-
-	// 3. Repositorios e insertar datos iniciales.
-	userRepo := storage.NewUsuarioGORM(db)
-	almacen := storage.NewSQLiteParqueo(db)
-	almacen.SembrarVacio()
-
-	// 4. Servicios.
 	authService := service.NewAuthService(
-		userRepo,
+		recursos.Usuarios,
 		cfg.JWTSecreto,
 		cfg.JWTDuracion,
 	)
 
-	vehiculoService := service.NewVehiculoService(almacen)
-	visitaService := service.NewVisitaService(almacen)
-	accesoService := service.NewAccesoService(almacen)
+	vehiculoService := service.NewVehiculoService(recursos.Parqueo)
+	visitaService := service.NewVisitaService(recursos.Parqueo)
+	accesoService := service.NewAccesoService(recursos.Parqueo)
 
 	// 5. Servidor (handlers HTTP).
 	services := handlers.Services{
