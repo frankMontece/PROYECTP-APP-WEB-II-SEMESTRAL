@@ -1,0 +1,10 @@
+.git
+.gitignore
+.env
+
+*.db
+*.db-journal
+
+*.out
+coverage.html
+README.md
