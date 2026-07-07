@@ -1,34 +1,35 @@
-# Levanta la API del sistema de gestión de condominios + PostgreSQL.
-# Los datos viven en el volumen "dbdata": sobreviven a "docker compose down"
-# (sin -v). Con -v se borran.
 services:
-  api:
-    build: .
-    environment:
-      PUERTO: ":8080"
-      DB_DRIVER: "postgres"
-      DB_DSN: "host=db user=condominio password=condominio dbname=condominio port=5432 sslmode=disable"
-      JWT_SECRETO: "cambia-esto-en-produccion"
-      JWT_DURACION: "2h"
-    ports:
-      - "8080:8080"
-    depends_on:
-      db:
-        condition: service_healthy
-
   db:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: condominio
       POSTGRES_PASSWORD: condominio
       POSTGRES_DB: condominio
+    ports:
+      - "5432:5432"
     volumes:
       - dbdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U condominio"]
-      interval: 3s
+      test: ["CMD-SHELL", "pg_isready -U condominio -d condominio"]
+      interval: 5s
       timeout: 3s
       retries: 10
+
+  api:
+    build: .
+    environment:
+      PUERTO: ":8080"
+      DB_DRIVER: postgres
+      DB_DSN: "host=db user=condominio password=condominio dbname=condominio port=5432 sslmode=disable TimeZone=America/Guayaquil"
+      JWT_SECRETO: "condominio-dev-secret-2026"
+      JWT_DURACION: "24h"
+      HTTP_READ_TIMEOUT: "10s"
+      HTTP_WRITE_TIMEOUT: "10s"
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
 
 volumes:
   dbdata:

@@ -5,16 +5,13 @@ import (
 	"net/http"
 )
 
-// credenciales es el body que reciben Register y Login.
-// Se define aquí para no exponer structs internos del modelo.
-type credenciales struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
-
-// Registrar atiende POST /api/v1/auth/register.
+// Registrar maneja POST /api/v1/auth/register
 func (s *Server) Registrar(w http.ResponseWriter, r *http.Request) {
-	var creds credenciales
+	var creds struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+
 	if err := json.NewDecoder(r.Body).Decode(&creds); err != nil {
 		RespondError(w, http.StatusBadRequest, "JSON inválido: "+err.Error())
 		return
@@ -29,9 +26,13 @@ func (s *Server) Registrar(w http.ResponseWriter, r *http.Request) {
 	RespondJSON(w, http.StatusCreated, usuario)
 }
 
-// Login atiende POST /api/v1/auth/login.
+// Login maneja POST /api/v1/auth/login
 func (s *Server) Login(w http.ResponseWriter, r *http.Request) {
-	var creds credenciales
+	var creds struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+
 	if err := json.NewDecoder(r.Body).Decode(&creds); err != nil {
 		RespondError(w, http.StatusBadRequest, "JSON inválido: "+err.Error())
 		return

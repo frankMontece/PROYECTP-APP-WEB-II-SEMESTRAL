@@ -1,0 +1,15 @@
+.git
+.gitignore
+.env
+*.db
+*.db-journal
+condominio.db
+app.exe
+HolaMundo.txt
+DOCUMENTO-TECNICO.docx
+README.mod
+*.out
+coverage.html
+README.md
+Dockerfile
+docker-compose.yml

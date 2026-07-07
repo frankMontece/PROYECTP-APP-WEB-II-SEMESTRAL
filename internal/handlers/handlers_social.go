@@ -1,88 +1,86 @@
 package handlers
 
 import (
+	"condominio-api/internal/models"
 	"encoding/json"
 	"net/http"
-	"strings"
+	"strconv"
 
-	"condominio-api/internal/models"
-	"condominio-api/internal/storage"
+	"github.com/go-chi/chi/v5"
 )
 
-// GetAllAreas atiende GET /api/v1/areas-sociales
-func GetAllAreas(w http.ResponseWriter, r *http.Request, store storage.AlmacenSocial) {
-	areas := store.ListarAreas()
+// ─── ÁREAS SOCIALES ──────────────────────────────────────────────────────────
+
+// ListarAreas maneja GET /api/v1/areas-sociales
+func (s *Server) ListarAreas(w http.ResponseWriter, r *http.Request) {
+	areas := s.Area.ListarAreas() // ← Usa AreaService
 	RespondJSON(w, http.StatusOK, areas)
 }
 
-// GetArea atiende GET /api/v1/areas-sociales/{id}
-func GetArea(w http.ResponseWriter, r *http.Request, store storage.AlmacenSocial) {
-	id, ok := parseUintID(r)
-	if !ok {
-		RespondError(w, http.StatusBadRequest, "id debe ser un número entero positivo")
+// GetArea maneja GET /api/v1/areas-sociales/{id}
+func (s *Server) GetArea(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(chi.URLParam(r, "id"))
+	if err != nil {
+		RespondError(w, http.StatusBadRequest, "ID inválido")
 		return
 	}
-	area, encontrada := store.BuscarAreaPorID(id)
-	if !encontrada {
-		RespondError(w, http.StatusNotFound, "área social no encontrada")
+
+	area, err := s.Area.ObtenerArea(uint(id))
+	if err != nil {
+		RespondError(w, statusDeError(err), err.Error())
 		return
 	}
 	RespondJSON(w, http.StatusOK, area)
 }
 
-// CreateArea atiende POST /api/v1/areas-sociales
-func CreateArea(w http.ResponseWriter, r *http.Request, store storage.AlmacenSocial) {
+// CreateArea maneja POST /api/v1/areas-sociales
+func (s *Server) CreateArea(w http.ResponseWriter, r *http.Request) {
 	var body models.AreaSocial
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		RespondError(w, http.StatusBadRequest, "JSON inválido: "+err.Error())
 		return
 	}
-	if strings.TrimSpace(body.Nombre) == "" {
-		RespondError(w, http.StatusBadRequest, "nombre es requerido")
+
+	creada, err := s.Area.CrearArea(body)
+	if err != nil {
+		RespondError(w, statusDeError(err), err.Error())
 		return
 	}
-	if body.Capacidad <= 0 {
-		RespondError(w, http.StatusBadRequest, "capacidad debe ser mayor a 0")
-		return
-	}
-	body.Activo = true
-	creada := store.CrearArea(body)
 	RespondJSON(w, http.StatusCreated, creada)
 }
 
-// UpdateArea atiende PUT /api/v1/areas-sociales/{id}
-func UpdateArea(w http.ResponseWriter, r *http.Request, store storage.AlmacenSocial) {
-	id, ok := parseUintID(r)
-	if !ok {
-		RespondError(w, http.StatusBadRequest, "id debe ser un número entero positivo")
+// UpdateArea maneja PUT /api/v1/areas-sociales/{id}
+func (s *Server) UpdateArea(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(chi.URLParam(r, "id"))
+	if err != nil {
+		RespondError(w, http.StatusBadRequest, "ID inválido")
 		return
 	}
+
 	var body models.AreaSocial
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		RespondError(w, http.StatusBadRequest, "JSON inválido: "+err.Error())
 		return
 	}
-	if strings.TrimSpace(body.Nombre) == "" {
-		RespondError(w, http.StatusBadRequest, "nombre es requerido")
-		return
-	}
-	actualizada, encontrada := store.ActualizarArea(id, body)
-	if !encontrada {
-		RespondError(w, http.StatusNotFound, "área social no encontrada")
+
+	actualizada, err := s.Area.ActualizarArea(uint(id), body)
+	if err != nil {
+		RespondError(w, statusDeError(err), err.Error())
 		return
 	}
 	RespondJSON(w, http.StatusOK, actualizada)
 }
 
-// DeleteArea atiende DELETE /api/v1/areas-sociales/{id}
-func DeleteArea(w http.ResponseWriter, r *http.Request, store storage.AlmacenSocial) {
-	id, ok := parseUintID(r)
-	if !ok {
-		RespondError(w, http.StatusBadRequest, "id debe ser un número entero positivo")
+// DeleteArea maneja DELETE /api/v1/areas-sociales/{id}
+func (s *Server) DeleteArea(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(chi.URLParam(r, "id"))
+	if err != nil {
+		RespondError(w, http.StatusBadRequest, "ID inválido")
 		return
 	}
-	if !store.BorrarArea(id) {
-		RespondError(w, http.StatusNotFound, "área social no encontrada")
+
+	if err := s.Area.BorrarArea(uint(id)); err != nil {
+		RespondError(w, statusDeError(err), err.Error())
 		return
 	}
 	RespondJSON(w, http.StatusNoContent, nil)

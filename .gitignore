@@ -1,1 +1,2 @@
+# Variables de entorno (contiene secretos reales, nunca se sube)
 .env

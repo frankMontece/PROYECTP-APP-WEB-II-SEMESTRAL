@@ -1,4 +1,7 @@
-// Package httpserver construye un *http.Server configurable con timeouts.
+// Package httpserver construye un *http.Server configurable mediante el patron
+// funcional Options. Es el segundo ejemplo del patron en el proyecto (el primero
+// es service.AuthService): aqui los valores opcionales con default son la
+// direccion de escucha y los timeouts.
 package httpserver
 
 import (
@@ -6,6 +9,7 @@ import (
 	"time"
 )
 
+// Valores por defecto del servidor si no se pasa ninguna Option.
 const (
 	puertoPorDefecto       = ":8080"
 	readTimeoutPorDefecto  = 10 * time.Second
@@ -13,10 +17,10 @@ const (
 	idleTimeoutPorDefecto  = 60 * time.Second
 )
 
-// Opcion configura el *http.Server en su construcción.
+// Opcion configura el *http.Server en su construccion.
 type Opcion func(*http.Server)
 
-// ConPuerto fija la dirección de escucha, ej ":8080".
+// ConPuerto fija la direccion de escucha, ej ":8080".
 func ConPuerto(puerto string) Opcion {
 	return func(s *http.Server) {
 		if puerto != "" {
@@ -43,9 +47,7 @@ func ConWriteTimeout(d time.Duration) Opcion {
 	}
 }
 
-// Nuevo construye un *http.Server con el handler dado y aplica las opciones.
-// Siempre tiene timeouts por defecto — un servidor sin ellos deja conexiones
-// lentas o maliciosas ocupando recursos indefinidamente.
+// Nuevo construye un *http.Server con el handler dado y aplica las Options.
 func Nuevo(handler http.Handler, opts ...Opcion) *http.Server {
 	s := &http.Server{
 		Addr:         puertoPorDefecto,
