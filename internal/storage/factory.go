@@ -40,6 +40,23 @@ func Inicializar(driver, dsn, rutaDB string) (*Recursos, error) {
 	oblRepo := NewObligacionSQLite(gdb)
 	multaRepo := NewMultaSQLite(gdb)
 
+	// Sembrar usuarios de ejemplo primero (Obligaciones/Multas dependen de ellos por FK)
+	var totalUsuarios int64
+	gdb.Model(&models.Usuario{}).Count(&totalUsuarios)
+	if totalUsuarios == 0 {
+		usuariosEjemplo := []models.Usuario{
+			{Email: "residente1@test.com", PasswordHash: "seed", CreadoEn: time.Now()},
+			{Email: "residente2@test.com", PasswordHash: "seed", CreadoEn: time.Now()},
+			{Email: "residente3@test.com", PasswordHash: "seed", CreadoEn: time.Now()},
+		}
+		gdb.Create(&usuariosEjemplo)
+	}
+
+	// Sembrar datos de ejemplo solo si las tablas están vacías.
+	// Útil para tener datos listos en la demo sin crearlos a mano cada vez.
+	oblRepo.SembrarVacio()
+	multaRepo.SembrarVacio()
+
 	cerrar := func() error {
 		sqlDB, err := gdb.DB()
 		if err != nil {
