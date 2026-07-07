@@ -11,8 +11,3 @@ type ObligacionRepository interface {
 	ActualizarObligacion(id uint, datos models.Obligacion) (models.Obligacion, bool)
 	BorrarObligacion(id uint) bool
 }
-
-type UserRepository interface {
-	CrearUsuario(u models.Usuario) (models.Usuario, error)
-	BuscarUsuarioPorEmail(email string) (models.Usuario, bool)
-}

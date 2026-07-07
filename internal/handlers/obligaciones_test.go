@@ -9,15 +9,20 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"condominio-api/internal/middleware"
 	"condominio-api/internal/models"
 	"condominio-api/internal/service"
+	"condominio-api/internal/storage"
 )
 
-//Tiene dos tests: uno que prueba que crear una obligación válida responde "201 creado", y otro que prueba que si no mandas el token de seguridad, te rechaza con "401 no autorizado".
+// Tiene dos tests: uno que prueba que crear una obligación válida responde "201 creado",
+// y otro que prueba que si no mandas el token de seguridad, te rechaza con "401 no autorizado".
 
 type fakeObligacionRepo struct {
 	obligaciones []models.Obligacion
 }
+
+var _ storage.ObligacionRepository = (*fakeObligacionRepo)(nil)
 
 func (f *fakeObligacionRepo) ListarObligaciones() []models.Obligacion {
 	return f.obligaciones
@@ -53,10 +58,21 @@ func (f *fakeObligacionRepo) BorrarObligacion(id uint) bool {
 	return false
 }
 
+// nuevoServidorObligaciones construye un *Server solo con el servicio de
+// Obligaciones montado, para los tests que no necesitan autenticación real.
+func nuevoServidorObligaciones(repo storage.ObligacionRepository) *Server {
+	svc := service.NewObligacionesService(repo)
+
+	return NewServer(Services{
+		Obligaciones: svc,
+	})
+}
+
+// ── Tests ─────────────────────────────────────────────────────────────────────
+
 func TestCreateObligacion_DevuelveCreated(t *testing.T) {
 	fake := &fakeObligacionRepo{}
-	svc := service.NewObligacionesService(fake)
-	srv := &Server{Obligaciones: svc}
+	srv := nuevoServidorObligaciones(fake)
 
 	body := models.Obligacion{
 		ResidenteID: 1,
@@ -76,24 +92,26 @@ func TestCreateObligacion_DevuelveCreated(t *testing.T) {
 	}
 }
 
+// Test de autenticación real: usa el middleware.Auth de verdad y el
+// fakeUserRepo/AuthService ya definidos en area_test.go — mismo patrón
+// que nuevoRouterDeTest, pero montando las rutas de Obligaciones.
 func TestObligaciones_SinToken_Devuelve401(t *testing.T) {
+	fakeUsuarios := &fakeUserRepo{}
+	authSvc := service.NewAuthService(fakeUsuarios)
+
 	fake := &fakeObligacionRepo{}
 	svc := service.NewObligacionesService(fake)
-	srv := &Server{Obligaciones: svc}
+
+	srv := NewServer(Services{
+		Auth:         authSvc,
+		Obligaciones: svc,
+	})
 
 	r := chi.NewRouter()
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Group(func(r chi.Router) {
-			r.Use(func(next http.Handler) http.Handler {
-				return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-					if req.Header.Get("Authorization") == "" {
-						w.WriteHeader(http.StatusUnauthorized)
-						return
-					}
-					next.ServeHTTP(w, req)
-				})
-			})
-			r.Get("/obligaciones", srv.ListarObligaciones)
+			r.Use(middleware.Auth(authSvc))
+			MontarRutasObligaciones(r, srv)
 		})
 	})
 
@@ -114,8 +132,7 @@ func TestListarObligaciones_DevuelveOK(t *testing.T) {
 	fake := &fakeObligacionRepo{
 		obligaciones: []models.Obligacion{{ID: 1, ResidenteID: 1, Monto: 50}},
 	}
-	svc := service.NewObligacionesService(fake)
-	srv := &Server{Obligaciones: svc}
+	srv := nuevoServidorObligaciones(fake)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/obligaciones", nil)
 	rec := httptest.NewRecorder()
@@ -133,8 +150,7 @@ func TestGetObligacion_Encontrada_DevuelveOK(t *testing.T) {
 	fake := &fakeObligacionRepo{
 		obligaciones: []models.Obligacion{{ID: 1, ResidenteID: 1, Monto: 50}},
 	}
-	svc := service.NewObligacionesService(fake)
-	srv := &Server{Obligaciones: svc}
+	srv := nuevoServidorObligaciones(fake)
 
 	r := chi.NewRouter()
 	r.Get("/api/v1/obligaciones/{id}", srv.GetObligacion)
@@ -151,8 +167,7 @@ func TestGetObligacion_Encontrada_DevuelveOK(t *testing.T) {
 
 func TestGetObligacion_NoEncontrada_Devuelve404(t *testing.T) {
 	fake := &fakeObligacionRepo{}
-	svc := service.NewObligacionesService(fake)
-	srv := &Server{Obligaciones: svc}
+	srv := nuevoServidorObligaciones(fake)
 
 	r := chi.NewRouter()
 	r.Get("/api/v1/obligaciones/{id}", srv.GetObligacion)
@@ -169,8 +184,7 @@ func TestGetObligacion_NoEncontrada_Devuelve404(t *testing.T) {
 
 func TestGetObligacion_IDInvalido_Devuelve400(t *testing.T) {
 	fake := &fakeObligacionRepo{}
-	svc := service.NewObligacionesService(fake)
-	srv := &Server{Obligaciones: svc}
+	srv := nuevoServidorObligaciones(fake)
 
 	r := chi.NewRouter()
 	r.Get("/api/v1/obligaciones/{id}", srv.GetObligacion)
@@ -189,8 +203,7 @@ func TestGetObligacion_IDInvalido_Devuelve400(t *testing.T) {
 
 func TestCreateObligacion_JSONInvalido_Devuelve400(t *testing.T) {
 	fake := &fakeObligacionRepo{}
-	svc := service.NewObligacionesService(fake)
-	srv := &Server{Obligaciones: svc}
+	srv := nuevoServidorObligaciones(fake)
 
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/obligaciones", bytes.NewReader([]byte("{esto no es json")))
 	rec := httptest.NewRecorder()
@@ -204,8 +217,7 @@ func TestCreateObligacion_JSONInvalido_Devuelve400(t *testing.T) {
 
 func TestCreateObligacion_MontoInvalido_Devuelve400(t *testing.T) {
 	fake := &fakeObligacionRepo{}
-	svc := service.NewObligacionesService(fake)
-	srv := &Server{Obligaciones: svc}
+	srv := nuevoServidorObligaciones(fake)
 
 	body := models.Obligacion{
 		ResidenteID: 1,
@@ -231,8 +243,7 @@ func TestUpdateObligacion_Exitosa_DevuelveOK(t *testing.T) {
 	fake := &fakeObligacionRepo{
 		obligaciones: []models.Obligacion{{ID: 1, ResidenteID: 1, Tipo: "mensual", Monto: 50, Periodo: "2026-06"}},
 	}
-	svc := service.NewObligacionesService(fake)
-	srv := &Server{Obligaciones: svc}
+	srv := nuevoServidorObligaciones(fake)
 
 	r := chi.NewRouter()
 	r.Put("/api/v1/obligaciones/{id}", srv.UpdateObligacion)
@@ -252,8 +263,7 @@ func TestUpdateObligacion_Exitosa_DevuelveOK(t *testing.T) {
 
 func TestUpdateObligacion_IDInvalido_Devuelve400(t *testing.T) {
 	fake := &fakeObligacionRepo{}
-	svc := service.NewObligacionesService(fake)
-	srv := &Server{Obligaciones: svc}
+	srv := nuevoServidorObligaciones(fake)
 
 	r := chi.NewRouter()
 	r.Put("/api/v1/obligaciones/{id}", srv.UpdateObligacion)
@@ -275,8 +285,7 @@ func TestUpdateObligacion_IDInvalido_Devuelve400(t *testing.T) {
 
 func TestDeleteObligacion_IDInvalido_Devuelve400(t *testing.T) {
 	fake := &fakeObligacionRepo{}
-	svc := service.NewObligacionesService(fake)
-	srv := &Server{Obligaciones: svc}
+	srv := nuevoServidorObligaciones(fake)
 
 	r := chi.NewRouter()
 	r.Delete("/api/v1/obligaciones/{id}", srv.DeleteObligacion)

@@ -29,13 +29,6 @@ type NotificacionRepository interface {
 	BorrarNotificacion(id uint) bool
 }
 
-// UserRepository define las operaciones para Usuarios
-type UserRepository interface {
-	CrearUsuario(u models.Usuario) (models.Usuario, error)
-	BuscarUsuarioPorEmail(email string) (models.Usuario, bool)
-}
-
 var _ AreaSocialRepository = (*AreaSQLite)(nil)
 var _ ReservaAreaRepository = (*ReservaSQLite)(nil)
 var _ NotificacionRepository = (*NotificacionSQLite)(nil)
-var _ UserRepository = (*UsuarioGORM)(nil)

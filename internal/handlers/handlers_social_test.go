@@ -64,29 +64,36 @@ var _ storage.AreaSocialRepository = (*fakeAreaRepo)(nil)
 func nuevoRouterDeTest(t *testing.T) (chi.Router, *service.AuthService) {
 	t.Helper()
 
-	// Repo de usuario en memoria para AuthService
 	fakeUserRepo := &fakeUserRepo{}
 	authSvc := service.NewAuthService(fakeUserRepo)
 
 	areaRepo := &fakeAreaRepo{
 		areas: []models.AreaSocial{
-			{ID: 1, Nombre: "Salón Principal", Capacidad: 100, Activo: true},
+			{
+				ID:        1,
+				Nombre:    "Salón Principal",
+				Capacidad: 100,
+				Activo:    true,
+			},
 		},
 	}
+
 	areaSvc := service.NewAreaService(areaRepo)
 
-	srv := NewServer(Deps{
+	srv := NewServer(Services{
 		Auth: authSvc,
 		Area: areaSvc,
 	})
 
 	r := chi.NewRouter()
+
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.Auth(authSvc))
 			MontarRutasSocial(r, srv)
 		})
 	})
+
 	return r, authSvc
 }
 
@@ -96,11 +103,14 @@ type fakeUserRepo struct {
 	usuarios []models.Usuario
 }
 
+var _ storage.UserRepository = (*fakeUserRepo)(nil)
+
 func (f *fakeUserRepo) CrearUsuario(u models.Usuario) (models.Usuario, error) {
 	u.ID = len(f.usuarios) + 1
 	f.usuarios = append(f.usuarios, u)
 	return u, nil
 }
+
 func (f *fakeUserRepo) BuscarUsuarioPorEmail(email string) (models.Usuario, bool) {
 	for _, u := range f.usuarios {
 		if u.Email == email {
