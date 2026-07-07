@@ -1,44 +1,118 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"log"
 	"net/http"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
 
+	"condominio-api/internal/config"
 	"condominio-api/internal/handlers"
+	"condominio-api/internal/httpserver"
+	middleware "condominio-api/internal/middelware"
+	"condominio-api/internal/service"
 	"condominio-api/internal/storage"
 )
 
 func main() {
-	// ── 1. Almacenes en memoria (uno por módulo) ──────────────────────────
-	storeParqueo   := storage.NuevaMemoriaParqueo()
-	storeAlicuotas := storage.NuevaMemoriaObligaciones()
-	storeSocial    := storage.NuevaMemoriaSocial()
+	cfg := config.Cargar()
+	if err := run(cfg); err != nil {
+		log.Fatal(err)
+	}
+}
 
-	// ── 2. Router principal ───────────────────────────────────────────────
+func run(cfg config.Config) error {
+	// 1-3. Base de datos + AutoMigrate + repositorios, vía factory.
+	// El factory decide sqlite/postgres según cfg.DBDriver.
+	recursos, err := storage.Inicializar(cfg.DBDriver, cfg.DBDSN, cfg.RutaDB)
+	if err != nil {
+		return err
+	}
+	defer recursos.Cerrar()
+
+	oblRepo := recursos.Obligaciones
+	multaRepo := recursos.Multas
+	usuarioRepo := recursos.Usuarios
+
+	// 4. Services (lógica de negocio)
+	// El secreto JWT ahora viene de config, ya no es una variable global
+	authService := service.NewAuthService(usuarioRepo, cfg.JWTSecreto, cfg.JWTDuracion)
+	oblService := service.NewObligacionesService(oblRepo)
+	multaService := service.NewMultasService(multaRepo)
+
+	// 5. Server (handlers HTTP)
+	servidor := handlers.NewServer(authService, oblService, multaService)
+
+	// 6. Router + middleware global
 	r := chi.NewRouter()
-
-	// ── 3. Middleware global ──────────────────────────────────────────────
 	r.Use(chimw.Logger)
 	r.Use(chimw.Recoverer)
+	r.Use(middleware.CORS)
 
-	// ── 4. Rutas versionadas /api/v1 ─────────────────────────────────────
 	r.Route("/api/v1", func(r chi.Router) {
+		// Rutas públicas
+		r.Post("/auth/register", servidor.Registrar)
+		r.Post("/auth/login", servidor.Login)
 
-		// Módulo C — Parqueo y Vehículos (Winter Povea)
-		handlers.MontarRutasParqueo(r, storeParqueo)
+		// Rutas protegidas con JWT
+		r.Group(func(r chi.Router) {
+			r.Use(middleware.Auth(authService))
 
-		// Módulo A — Obligaciones (Héctor Fernández)
-		handlers.MontarRutasAlicuotas(r, storeAlicuotas)
+			r.Get("/obligaciones", servidor.ListarObligaciones)
+			r.Post("/obligaciones", servidor.CreateObligacion)
+			r.Get("/obligaciones/{id}", servidor.GetObligacion)
+			r.Put("/obligaciones/{id}", servidor.UpdateObligacion)
+			r.Delete("/obligaciones/{id}", servidor.DeleteObligacion)
 
-		// Módulo B — Área Social y Notificaciones (Frank Montecé)
-		handlers.MontarRutasSocial(r, storeSocial)
+			r.Get("/multas", servidor.ListarMultas)
+			r.Post("/multas", servidor.CreateMulta)
+			r.Get("/multas/{id}", servidor.GetMulta)
+			r.Put("/multas/{id}", servidor.UpdateMulta)
+			r.Delete("/multas/{id}", servidor.DeleteMulta)
+		})
 	})
 
-	// ── 5. Arrancar el servidor ───────────────────────────────────────────
-	log.Println("=== Sistema de Gestión de Condominios — INMUVERA S.A.S. ===")
-	log.Println("Servidor escuchando en http://localhost:8080")
-	log.Fatal(http.ListenAndServe(":8080", r))
+	// 7. Servidor HTTP con timeouts desde config
+	srv := httpserver.Nuevo(
+		r,
+		httpserver.ConPuerto(cfg.Puerto),
+		httpserver.ConReadTimeout(cfg.ReadTimeout),
+		httpserver.ConWriteTimeout(cfg.WriteTimeout),
+	)
+
+	// 8. Contexto que se cancela al recibir Ctrl+C o SIGTERM
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	// 9. Arrancar en goroutine para no bloquear
+	errServidor := make(chan error, 1)
+	go func() {
+		log.Printf("Servidor escuchando en http://localhost%s", cfg.Puerto)
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			errServidor <- err
+		}
+	}()
+
+	// 10. Esperar señal de apagado o error del servidor
+	select {
+	case err := <-errServidor:
+		return err
+	case <-ctx.Done():
+		log.Println("Señal de apagado recibida, cerrando ordenadamente...")
+	}
+
+	// 11. Graceful shutdown — hasta 10s para terminar requests en curso
+	ctxApagado, cancelar := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancelar()
+	if err := srv.Shutdown(ctxApagado); err != nil {
+		return err
+	}
+	log.Println("Servidor detenido limpiamente.")
+	return nil
 }
