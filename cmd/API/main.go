@@ -13,6 +13,7 @@ import (
 
 	"condominio-api/internal/config"
 	"condominio-api/internal/handlers"
+	"condominio-api/internal/httpserver"
 	"condominio-api/internal/middleware"
 	"condominio-api/internal/service"
 	"condominio-api/internal/storage"
@@ -23,8 +24,8 @@ func main() {
 	cfg := config.Cargar()
 
 	// 1. Inicializar almacenamiento (conexión + migración + siembra + repositorios).
-	//    main.go ya no importa GORM ni el driver de SQLite: eso vive en storage.Inicializar.
-	recursos, err := storage.Inicializar(cfg.RutaDB)
+	//    main.go ya no importa GORM ni ningún driver concreto: eso vive en storage.Inicializar.
+	recursos, err := storage.Inicializar(cfg.DBDriver, cfg.RutaDB, cfg.DBDSN)
 	if err != nil {
 		log.Fatal("Error al inicializar el almacenamiento:", err)
 	}
@@ -67,12 +68,11 @@ func main() {
 	})
 
 	// 7. http.Server con timeouts configurables.
-	srv := &http.Server{
-		Addr:         cfg.Puerto,
-		Handler:      r,
-		ReadTimeout:  cfg.ReadTimeout,
-		WriteTimeout: cfg.WriteTimeout,
-	}
+	srv := httpserver.Nuevo(r,
+		httpserver.ConPuerto(cfg.Puerto),
+		httpserver.ConReadTimeout(cfg.ReadTimeout),
+		httpserver.ConWriteTimeout(cfg.WriteTimeout),
+	)
 
 	// 8. Contexto que se cancela al recibir Ctrl+C / SIGTERM.
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)

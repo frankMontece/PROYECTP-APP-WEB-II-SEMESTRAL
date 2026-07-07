@@ -14,6 +14,8 @@ import (
 type Config struct {
 	Puerto       string
 	RutaDB       string
+	DBDriver     string // "sqlite" (default, local) o "postgres" (Docker)
+	DBDSN        string // DSN completo de Postgres; vacío si DBDriver == "sqlite"
 	JWTSecreto   []byte
 	JWTDuracion  time.Duration
 	ReadTimeout  time.Duration
@@ -26,6 +28,8 @@ func Cargar() Config {
 	return Config{
 		Puerto:       conTexto("PUERTO", ":8080"),
 		RutaDB:       conTexto("RUTA_DB", "condominio.db"),
+		DBDriver:     conTexto("DB_DRIVER", "sqlite"),
+		DBDSN:        conTexto("DB_DSN", ""),
 		JWTSecreto:   []byte(conTexto("JWT_SECRETO", "condominio-secreto-solo-dev")),
 		JWTDuracion:  conDuracion("JWT_DURACION", 24*time.Hour),
 		ReadTimeout:  conDuracion("HTTP_READ_TIMEOUT", 10*time.Second),
