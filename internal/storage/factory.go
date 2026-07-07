@@ -2,6 +2,8 @@ package storage
 
 import (
 	"fmt"
+	"log"
+	"time"
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/driver/postgres"
@@ -13,11 +15,16 @@ import (
 // Recursos agrupa todo lo que la capa de almacenamiento expone a la aplicación:
 // los repositorios ya construidos y una función para cerrar la conexión al apagar.
 type Recursos struct {
-	Usuarios     UserRepository
+	Usuarios UserRepository
+
+	Obligaciones ObligacionRepository
+	Multas       MultaRepository
+
 	Area         AreaSocialRepository
 	Reserva      ReservaAreaRepository
 	Notificacion NotificacionRepository
-	Cerrar       func() error
+
+	Cerrar func() error
 }
 
 // Inicializar centraliza todo el plumbing de almacenamiento (patrón Factory):
@@ -27,28 +34,17 @@ type Recursos struct {
 //
 // driver: "sqlite" (default) o "postgres". dsn: solo se usa si driver == "postgres".
 // rutaDB: solo se usa si driver == "sqlite" (o está vacío/default).
-func Inicializar(driver, rutaDB, dsn string) (*Recursos, error) {
-	// 1. Abrir conexión según el driver. ÚNICO CAMBIO DE LÓGICA DEL HITO.
-	var (
-		db  *gorm.DB
-		err error
-	)
-	switch driver {
-	case "postgres":
-		db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
-		if err != nil {
-			return nil, fmt.Errorf("abrir PostgreSQL: %w", err)
-		}
-	default: // "sqlite" o vacío
-		db, err = gorm.Open(sqlite.Open(rutaDB), &gorm.Config{})
-		if err != nil {
-			return nil, fmt.Errorf("abrir SQLite: %w", err)
-		}
+func Inicializar(driver, dsn, rutaDB string) (*Recursos, error) {
+	gdb, err := abrirGorm(driver, dsn, rutaDB)
+	if err != nil {
+		return nil, err
 	}
 
 	// 2. Migrar esquema (idéntico, sin importar el driver).
-	if err := db.AutoMigrate(
+	if err := gdb.AutoMigrate(
 		&models.Usuario{},
+		&models.Obligacion{},
+		&models.Multa{},
 		&models.AreaSocial{},
 		&models.ReservaArea{},
 		&models.Notificacion{},
@@ -56,18 +52,24 @@ func Inicializar(driver, rutaDB, dsn string) (*Recursos, error) {
 		return nil, fmt.Errorf("AutoMigrate: %w", err)
 	}
 
-	// 3. Sembrar datos iniciales (solo si están vacíos).
-	SembrarSocial(db)
+	// 3. Repositorios.
+	usuarios := NewUsuarioGORM(gdb)
+	obligaciones := NewObligacionSQLite(gdb)
+	multas := NewMultaSQLite(gdb)
+	area := NewAreaSQLite(gdb)
+	reserva := NewReservaSQLite(gdb)
+	notificacion := NewNotificacionSQLite(gdb)
 
-	// 4. Repositorios.
-	usuarios := NewUsuarioGORM(db)
-	area := NewAreaSQLite(db)
-	reserva := NewReservaSQLite(db)
-	notificacion := NewNotificacionSQLite(db)
+	// 4. Sembrar datos iniciales — solo si el driver no es postgres, nunca en producción.
+	if driver != "postgres" {
+		SembrarSocial(gdb)
+		obligaciones.SembrarVacio()
+		multas.SembrarVacio()
+	}
 
 	// 5. Cierre ordenado de la conexión a la base de datos.
 	cerrar := func() error {
-		sqlDB, err := db.DB()
+		sqlDB, err := gdb.DB()
 		if err != nil {
 			return err
 		}
@@ -75,10 +77,43 @@ func Inicializar(driver, rutaDB, dsn string) (*Recursos, error) {
 	}
 
 	return &Recursos{
-		Usuarios:     usuarios,
+		Usuarios: usuarios,
+
+		Obligaciones: obligaciones,
+		Multas:       multas,
+
 		Area:         area,
 		Reserva:      reserva,
 		Notificacion: notificacion,
-		Cerrar:       cerrar,
+
+		Cerrar: cerrar,
 	}, nil
+}
+
+// abrirGorm decide automáticamente si usar SQLite o PostgreSQL,
+// con reintentos en postgres porque el contenedor de la API puede
+// arrancar antes de que el contenedor de Postgres esté listo.
+func abrirGorm(driver, dsn, rutaDB string) (*gorm.DB, error) {
+	switch driver {
+	case "postgres":
+		var db *gorm.DB
+		var err error
+
+		for intento := 1; intento <= 10; intento++ {
+			db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+			if err == nil {
+				return db, nil
+			}
+			log.Printf("PostgreSQL aún no está listo (%d/10): %v", intento, err)
+			time.Sleep(2 * time.Second)
+		}
+		return nil, fmt.Errorf("no fue posible conectar con PostgreSQL: %w", err)
+
+	default: // sqlite
+		db, err := gorm.Open(sqlite.Open(rutaDB), &gorm.Config{})
+		if err != nil {
+			return nil, fmt.Errorf("abrir sqlite: %w", err)
+		}
+		return db, nil
+	}
 }
