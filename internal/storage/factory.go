@@ -37,8 +37,8 @@ func Inicializar(driver, dsn, rutaDB string) (*Recursos, error) {
 	}
 
 	usuarioRepo := NewUsuarioGORM(gdb)
-	oblRepo := NewObligacionesGORM(gdb)
-	multaRepo := NewMultasGORM(gdb)
+	oblRepo := NewObligacionSQLite(gdb)
+	multaRepo := NewMultaSQLite(gdb)
 
 	cerrar := func() error {
 		sqlDB, err := gdb.DB()

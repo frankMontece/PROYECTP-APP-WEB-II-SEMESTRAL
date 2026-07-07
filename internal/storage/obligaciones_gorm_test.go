@@ -31,7 +31,7 @@ func abrirDBPrueba(t *testing.T) *gorm.DB {
 // 3. ListarObligaciones la refleja en el slice resultado.
 func TestObligacionesGORM_CrearYBuscar(t *testing.T) {
 	db := abrirDBPrueba(t)
-	repo := storage.NewObligacionesGORM(db)
+	repo := storage.NewObligacionSQLite(db)
 
 	// Crear
 	nueva := models.Obligacion{
