@@ -3,27 +3,29 @@ package models
 import "time"
 
 type Obligacion struct {
-	ID               uint       `json:"id"` // Identificador único de la obligación, uint es para evitar problemas con IDs negativos
-	ResidenteID      uint       `json:"residente_id"`
-	Tipo             string     `json:"tipo"`    // "mensual", "extraordinaria"
-	Monto            float64    `json:"monto"`   // Monto de la obligación
-	Periodo          string     `json:"periodo"` // Formato "YYYY-MM"
-	Estado           string     `json:"estado"`  // "pendiente", "pagada", "vencida"
+	ID               uint       `json:"id" gorm:"primaryKey"`
+	ResidenteID      uint       `json:"residente_id" gorm:"not null;index"`
+	Residente        Usuario    `json:"residente,omitempty" gorm:"foreignKey:ResidenteID;references:ID"`
+	Tipo             string     `json:"tipo" gorm:"size:20;not null"`
+	Monto            float64    `json:"monto" gorm:"not null"`
+	Periodo          string     `json:"periodo" gorm:"size:7;not null"`
+	Estado           string     `json:"estado" gorm:"size:20;not null;default:pendiente"`
 	FechaEmision     time.Time  `json:"fecha_emision"`
 	FechaVencimiento time.Time  `json:"fecha_vencimiento"`
-	FechaPago        *time.Time `json:"fecha_pago,omitempty"` // Fecha de pago, nula si no se ha pagado, se usa puntero para permitir nulo
-	Comprobante      string     `json:"comprobante,omitempty"`
-	MoraCalculada    float64    `json:"mora_calculada"`
+	FechaPago        *time.Time `json:"fecha_pago,omitempty"`
+	Comprobante      string     `json:"comprobante,omitempty" gorm:"size:100"`
+	MoraCalculada    float64    `json:"mora_calculada" gorm:"default:0"`
 }
 
 // Multa representa una sanción discreta aplicada a un residente
-// BelongsTo: Residente
+// BelongsTo: Usuario (residente)
 type Multa struct {
-	ID           uint       `json:"id"`
-	ResidenteID  uint       `json:"residente_id"`
-	Motivo       string     `json:"motivo"` //
-	Monto        float64    `json:"monto"`
-	Estado       string     `json:"estado"` // "pendiente", "pagada", "apelada"
+	ID           uint       `json:"id" gorm:"primaryKey"`
+	ResidenteID  uint       `json:"residente_id" gorm:"not null;index"`
+	Residente    Usuario    `json:"residente,omitempty" gorm:"foreignKey:ResidenteID;references:ID"`
+	Motivo       string     `json:"motivo" gorm:"size:100;not null"`
+	Monto        float64    `json:"monto" gorm:"not null"`
+	Estado       string     `json:"estado" gorm:"size:20;not null;default:pendiente"`
 	FechaEmision time.Time  `json:"fecha_emision"`
-	FechaPago    *time.Time `json:"fecha_pago,omitempty"` // Fecha de pago, nula si no se ha pagado, se usa puntero para permitir nulo
+	FechaPago    *time.Time `json:"fecha_pago,omitempty"`
 }

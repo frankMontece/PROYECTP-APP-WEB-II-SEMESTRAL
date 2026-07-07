@@ -38,7 +38,7 @@ func statusDeError(err error) int {
 		return http.StatusConflict
 	case strings.Contains(mensaje, "no encontrada") || strings.Contains(mensaje, "no encontrado") || strings.Contains(mensaje, "not found") || strings.Contains(mensaje, "not exist"):
 		return http.StatusNotFound
-	case strings.Contains(mensaje, "requerido") || strings.Contains(mensaje, "invalido") || strings.Contains(mensaje, "invalid") || strings.Contains(mensaje, "mal formado") || strings.Contains(mensaje, "bad request"):
+	case strings.Contains(mensaje, "requerido") || strings.Contains(mensaje, "invalido") || strings.Contains(mensaje, "invalid") || strings.Contains(mensaje, "mal formado") || strings.Contains(mensaje, "bad request") || strings.Contains(mensaje, "debe ser"):
 		return http.StatusBadRequest
 	default:
 		return http.StatusInternalServerError
