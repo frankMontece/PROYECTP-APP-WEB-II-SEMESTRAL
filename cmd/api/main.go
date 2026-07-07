@@ -44,8 +44,8 @@ func run(cfg config.Config) error {
 		service.WithDuracionToken(cfg.JWTDuracion),
 	)
 
-	//oblService := service.NewObligacionesService(recursos.Obligaciones)
-	//multaService := service.NewMultasService(recursos.Multas)
+	oblService := service.NewObligacionesService(recursos.Obligaciones)
+	multaService := service.NewMultasService(recursos.Multas)
 
 	//vehiculoService := service.NewVehiculoService(recursos.Parqueo)
 	//visitaService := service.NewVisitaService(recursos.Parqueo)
@@ -59,8 +59,8 @@ func run(cfg config.Config) error {
 	servidor := handlers.NewServer(handlers.Services{
 		Auth: authService,
 
-		//Obligaciones: oblService,
-		//Multas:       multaService,
+		Obligaciones: oblService,
+		Multas:       multaService,
 
 		//Vehiculos: vehiculoService,
 		//Visitas:   visitaService,
