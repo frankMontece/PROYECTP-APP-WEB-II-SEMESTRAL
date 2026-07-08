@@ -2,25 +2,10 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
-
-	"github.com/go-chi/chi/v5"
 
 	"condominio-api/internal/models"
 )
-
-// parseID lee el parámetro {id} de la URL y lo convierte a uint.
-// Compartido por los handlers de Obligacion y Multa.
-func parseID(r *http.Request) (uint, bool) {
-	idStr := chi.URLParam(r, "id")
-	var id uint
-	_, err := fmt.Sscanf(idStr, "%d", &id)
-	if err != nil || id == 0 {
-		return 0, false
-	}
-	return id, true
-}
 
 // ─── Obligaciones ─────────────────────────────────────────────────────────────
 
@@ -29,8 +14,8 @@ func (s *Server) ListarObligaciones(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) GetObligacion(w http.ResponseWriter, r *http.Request) {
-	id, ok := parseID(r)
-	if !ok {
+	id, err := parseID(r)
+	if err != nil {
 		RespondError(w, http.StatusBadRequest, "ID debe ser un número entero positivo")
 		return
 	}
@@ -57,8 +42,8 @@ func (s *Server) CreateObligacion(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) UpdateObligacion(w http.ResponseWriter, r *http.Request) {
-	id, ok := parseID(r)
-	if !ok {
+	id, err := parseID(r)
+	if err != nil {
 		RespondError(w, http.StatusBadRequest, "ID debe ser un número entero positivo")
 		return
 	}
@@ -76,8 +61,8 @@ func (s *Server) UpdateObligacion(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) DeleteObligacion(w http.ResponseWriter, r *http.Request) {
-	id, ok := parseID(r)
-	if !ok {
+	id, err := parseID(r)
+	if err != nil {
 		RespondError(w, http.StatusBadRequest, "ID debe ser un número entero positivo")
 		return
 	}

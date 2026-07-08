@@ -14,7 +14,7 @@ import (
 // desde la configuracion cargada del .env (ver internal/config).
 const (
 	secretoPorDefecto  = "condominio-secreto-solo-dev"
-	duracionPorDefecto = 24 * time.Hour
+	duracionPorDefecto = 2 * time.Hour
 )
 
 type Claims struct {

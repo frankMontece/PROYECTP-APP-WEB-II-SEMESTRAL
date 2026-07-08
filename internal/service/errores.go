@@ -44,12 +44,33 @@ var (
 )
 
 // ============================================================================
-// Parqueo
+// Parqueo — Vehículos
 // ============================================================================
 
 var (
-// Agrega aquí los errores propios del módulo de parqueo.
-// Ejemplo:
-// ErrPlacaVacia        = errors.New("la placa es requerida")
-// ErrVehiculoNoActivo  = errors.New("el vehículo no está activo")
+	ErrVehiculoNoEncontrado = errors.New("vehículo no encontrado")
+	ErrPlacaRequerida       = errors.New("placa es requerida")
+	ErrMarcaRequerida       = errors.New("marca es requerida")
+	ErrResidenteRequerido   = errors.New("residente_id es requerido")
+)
+
+// ============================================================================
+// Parqueo — Visitas
+// ============================================================================
+
+var (
+	ErrVisitaNoEncontrada       = errors.New("visita no encontrada")
+	ErrPlacaVisitanteRequerida  = errors.New("placa_visitante es requerida")
+	ErrNombreVisitanteRequerido = errors.New("nombre_visitante es requerido")
+	ErrCondominioRequerido      = errors.New("condominio_id es requerido")
+)
+
+// ============================================================================
+// Parqueo — Accesos
+// ============================================================================
+
+var (
+	ErrAccesoNoEncontrado     = errors.New("acceso no encontrado")
+	ErrVehiculoRequerido      = errors.New("vehiculo_id es requerido")
+	ErrTipoMovimientoInvalido = errors.New("tipo_movimiento debe ser 'entrada' o 'salida'")
 )

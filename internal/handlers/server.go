@@ -13,9 +13,9 @@ type Services struct {
 	Multas       *service.MultasService
 
 	// Módulo Parqueo (acceso y vehículos)
-	//	Vehiculos *service.VehiculoService
-	//	Visitas   *service.VisitaService
-	//	Accesos   *service.AccesoService
+	Vehiculos *service.VehiculoService
+	Visitas   *service.VisitaService
+	Accesos   *service.AccesoService
 
 	// Módulo Área Social
 	Area         *service.AreaService

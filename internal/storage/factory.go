@@ -15,10 +15,16 @@ import (
 // Recursos agrupa todo lo que la capa de almacenamiento expone a la aplicación:
 // los repositorios ya construidos y una función para cerrar la conexión al apagar.
 type Recursos struct {
+	DB *gorm.DB
+
 	Usuarios UserRepository
 
 	Obligaciones ObligacionRepository
 	Multas       MultaRepository
+
+	Vehiculos VehiculosRepository
+	Visitas   VisitasRepository
+	Accesos   AccesosRepository
 
 	Area         AreaSocialRepository
 	Reserva      ReservaAreaRepository
@@ -45,6 +51,9 @@ func Inicializar(driver, dsn, rutaDB string) (*Recursos, error) {
 		&models.Usuario{},
 		&models.Obligacion{},
 		&models.Multa{},
+		&models.Vehiculo{},
+		&models.VisitaVehiculo{},
+		&models.AccesoVehiculo{},
 		&models.AreaSocial{},
 		&models.ReservaArea{},
 		&models.Notificacion{},
@@ -56,6 +65,9 @@ func Inicializar(driver, dsn, rutaDB string) (*Recursos, error) {
 	usuarios := NewUsuarioGORM(gdb)
 	obligaciones := NewObligacionSQLite(gdb)
 	multas := NewMultaSQLite(gdb)
+	vehiculos := NewVehiculoSQLite(gdb)
+	visitas := NewVisitaSQLite(gdb)
+	accesos := NewAccesoSQLite(gdb)
 	area := NewAreaSQLite(gdb)
 	reserva := NewReservaSQLite(gdb)
 	notificacion := NewNotificacionSQLite(gdb)
@@ -65,6 +77,7 @@ func Inicializar(driver, dsn, rutaDB string) (*Recursos, error) {
 		SembrarSocial(gdb)
 		obligaciones.SembrarVacio()
 		multas.SembrarVacio()
+		SembrarParqueo(gdb)
 	}
 
 	// 5. Cierre ordenado de la conexión a la base de datos.
@@ -77,10 +90,16 @@ func Inicializar(driver, dsn, rutaDB string) (*Recursos, error) {
 	}
 
 	return &Recursos{
+		DB: gdb,
+
 		Usuarios: usuarios,
 
 		Obligaciones: obligaciones,
 		Multas:       multas,
+
+		Vehiculos: vehiculos,
+		Visitas:   visitas,
+		Accesos:   accesos,
 
 		Area:         area,
 		Reserva:      reserva,

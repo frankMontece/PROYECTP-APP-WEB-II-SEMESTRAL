@@ -1,21 +1,8 @@
 package handlers
 
 import (
-	"net/http"
-	"strconv"
-
 	"github.com/go-chi/chi/v5"
 )
-
-// parseUintID extrae y valida el parámetro {id} de la URL
-func parseUintID(r *http.Request) (uint, bool) {
-	idStr := chi.URLParam(r, "id")
-	id64, err := strconv.ParseUint(idStr, 10, 64)
-	if err != nil {
-		return 0, false
-	}
-	return uint(id64), true
-}
 
 // MontarRutasSocial registra todas las rutas del Módulo B
 // Usa los handlers que llaman a servicios específicos

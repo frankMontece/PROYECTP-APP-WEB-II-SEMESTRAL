@@ -37,7 +37,7 @@ func run(cfg config.Config) error {
 	}
 	defer recursos.Cerrar()
 
-	// 2. Servicios de los tres módulos.
+	// 2. Servicios de los cuatro módulos.
 	authService := service.NewAuthService(
 		recursos.Usuarios,
 		service.WithSecreto(cfg.JWTSecreto),
@@ -47,9 +47,9 @@ func run(cfg config.Config) error {
 	oblService := service.NewObligacionesService(recursos.Obligaciones)
 	multaService := service.NewMultasService(recursos.Multas)
 
-	//vehiculoService := service.NewVehiculoService(recursos.Parqueo)
-	//visitaService := service.NewVisitaService(recursos.Parqueo)
-	//accesoService := service.NewAccesoService(recursos.Parqueo)
+	vehiculoService := service.NewVehiculoService(recursos.Vehiculos)
+	visitaService := service.NewVisitaService(recursos.Visitas)
+	accesoService := service.NewAccesoService(recursos.Accesos)
 
 	areaService := service.NewAreaService(recursos.Area)
 	reservaService := service.NewReservaService(recursos.Reserva)
@@ -62,9 +62,9 @@ func run(cfg config.Config) error {
 		Obligaciones: oblService,
 		Multas:       multaService,
 
-		//Vehiculos: vehiculoService,
-		//Visitas:   visitaService,
-		//Accesos:   accesoService,
+		Vehiculos: vehiculoService,
+		Visitas:   visitaService,
+		Accesos:   accesoService,
 
 		Area:         areaService,
 		Reserva:      reservaService,
@@ -83,13 +83,13 @@ func run(cfg config.Config) error {
 		r.Post("/auth/register", servidor.Registrar)
 		r.Post("/auth/login", servidor.Login)
 
-		// Rutas protegidas — un solo middleware de auth para los tres dominios.
+		// Rutas protegidas — un solo middleware de auth para los cuatro dominios.
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.Auth(authService))
 
 			handlers.MontarRutasObligaciones(r, servidor)
-			//handlers.MontarRutasParqueo(r, servidor)
 			handlers.MontarRutasSocial(r, servidor)
+			servidor.MontarRutasParqueo(r)
 		})
 	})
 

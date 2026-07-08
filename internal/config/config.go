@@ -31,7 +31,7 @@ func Cargar() Config {
 		DBDriver:     conTexto("DB_DRIVER", "sqlite"),
 		DBDSN:        conTexto("DB_DSN", ""),
 		JWTSecreto:   []byte(conTexto("JWT_SECRETO", "condominio-secreto-solo-dev")),
-		JWTDuracion:  conDuracion("JWT_DURACION", 24*time.Hour),
+		JWTDuracion:  conDuracion("JWT_DURACION", 2*time.Hour),
 		ReadTimeout:  conDuracion("HTTP_READ_TIMEOUT", 10*time.Second),
 		WriteTimeout: conDuracion("HTTP_WRITE_TIMEOUT", 10*time.Second),
 	}

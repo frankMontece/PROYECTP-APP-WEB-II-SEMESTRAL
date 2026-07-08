@@ -7,16 +7,13 @@ import (
 	"condominio-api/internal/models"
 )
 
-// ─── Multas ───────────────────────────────────────────────────────────────────
-// parseID se reutiliza desde obligaciones.go — no se redefine aquí.
-
 func (s *Server) ListarMultas(w http.ResponseWriter, r *http.Request) {
 	RespondJSON(w, http.StatusOK, s.Multas.ListarMultas())
 }
 
 func (s *Server) GetMulta(w http.ResponseWriter, r *http.Request) {
-	id, ok := parseID(r)
-	if !ok {
+	id, err := parseID(r)
+	if err != nil {
 		RespondError(w, http.StatusBadRequest, "ID debe ser un número entero positivo")
 		return
 	}
@@ -43,8 +40,8 @@ func (s *Server) CreateMulta(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) UpdateMulta(w http.ResponseWriter, r *http.Request) {
-	id, ok := parseID(r)
-	if !ok {
+	id, err := parseID(r)
+	if err != nil {
 		RespondError(w, http.StatusBadRequest, "ID debe ser un número entero positivo")
 		return
 	}
@@ -62,8 +59,8 @@ func (s *Server) UpdateMulta(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) DeleteMulta(w http.ResponseWriter, r *http.Request) {
-	id, ok := parseID(r)
-	if !ok {
+	id, err := parseID(r)
+	if err != nil {
 		RespondError(w, http.StatusBadRequest, "ID debe ser un número entero positivo")
 		return
 	}
