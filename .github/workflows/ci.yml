@@ -25,3 +25,14 @@ jobs:
 
       - name: Ejecutar tests (go test)
         run: go test -v ./...
+
+  docker:
+    needs: verificar
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Clonar el repositorio
+        uses: actions/checkout@v4
+
+      - name: Construir imagen Docker
+        run: docker build -t condominio-api:ci .
