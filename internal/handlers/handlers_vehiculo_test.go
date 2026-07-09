@@ -220,7 +220,7 @@ func TestObtenerVehiculo_NoExiste_404(t *testing.T) {
 
 func TestListarVehiculos_ConToken_200(t *testing.T) {
 	// Preparar
-	r, token := setupRouter(t)
+	r, token := setupRouterAdmin(t)
 
 	// Sembrar un vehículo antes de listar, para no depender de datos vacíos
 	body := models.Vehiculo{ResidenteID: 1, Placa: "PBG-2241", Marca: "Toyota"}
