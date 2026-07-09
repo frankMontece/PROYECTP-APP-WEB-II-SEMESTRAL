@@ -89,7 +89,7 @@ func run(cfg config.Config) error {
 
 			handlers.MontarRutasObligaciones(r, servidor)
 			handlers.MontarRutasSocial(r, servidor)
-			servidor.MontarRutasParqueo(r)
+			handlers.MontarRutasParqueo(r, servidor)
 		})
 	})
 

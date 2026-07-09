@@ -140,7 +140,7 @@ func setupRouter(t *testing.T) (chi.Router, string) {
 	r := chi.NewRouter()
 	r.Group(func(r chi.Router) {
 		r.Use(middleware.Auth(authService))
-		srv.MontarRutasParqueo(r)
+		handlers.MontarRutasParqueo(r, srv)
 	})
 
 	return r, token
@@ -150,7 +150,7 @@ func setupRouter(t *testing.T) (chi.Router, string) {
 
 func TestCrearVehiculo_ConToken_201(t *testing.T) {
 	// Preparar
-	r, token := setupRouter(t)
+	r, token := setupRouterAdmin(t)
 
 	body := models.Vehiculo{
 		ResidenteID: 1,
@@ -251,7 +251,7 @@ func TestListarVehiculos_ConToken_200(t *testing.T) {
 
 func TestActualizarVehiculo_Valido_200(t *testing.T) {
 	// Preparar: crear un vehículo para luego actualizarlo
-	r, token := setupRouter(t)
+	r, token := setupRouterAdmin(t)
 
 	crearBody := models.Vehiculo{ResidenteID: 1, Placa: "PBG-2241", Marca: "Toyota", Modelo: "Corolla"}
 	buf, _ := json.Marshal(crearBody)
@@ -293,7 +293,7 @@ func TestActualizarVehiculo_Valido_200(t *testing.T) {
 
 func TestActualizarVehiculo_BodyInvalido_400(t *testing.T) {
 	// Preparar
-	r, token := setupRouter(t)
+	r, token := setupRouterAdmin(t)
 
 	req := httptest.NewRequest(http.MethodPut, "/vehiculos/1", bytes.NewReader([]byte("{esto no es json")))
 	req.Header.Set("Content-Type", "application/json")
@@ -311,7 +311,7 @@ func TestActualizarVehiculo_BodyInvalido_400(t *testing.T) {
 
 func TestBorrarVehiculo_NoExiste_404(t *testing.T) {
 	// Preparar: base vacía, ningún vehículo creado
-	r, token := setupRouter(t)
+	r, token := setupRouterAdmin(t)
 
 	req := httptest.NewRequest(http.MethodDelete, "/vehiculos/999", nil)
 	req.Header.Set("Authorization", "Bearer "+token)
@@ -328,7 +328,7 @@ func TestBorrarVehiculo_NoExiste_404(t *testing.T) {
 
 func TestBorrarVehiculo_Existente_204(t *testing.T) {
 	// Preparar: crear un vehículo para luego borrarlo
-	r, token := setupRouter(t)
+	r, token := setupRouterAdmin(t)
 
 	crearBody := models.Vehiculo{ResidenteID: 1, Placa: "PBG-2241", Marca: "Toyota"}
 	buf, _ := json.Marshal(crearBody)
@@ -351,7 +351,7 @@ func TestBorrarVehiculo_Existente_204(t *testing.T) {
 
 func TestCrearVehiculo_JSONInvalido_400(t *testing.T) {
 	// Preparar
-	r, token := setupRouter(t)
+	r, token := setupRouterAdmin(t)
 
 	req := httptest.NewRequest(http.MethodPost, "/vehiculos", bytes.NewReader([]byte("{esto no es json")))
 	req.Header.Set("Content-Type", "application/json")
@@ -369,7 +369,7 @@ func TestCrearVehiculo_JSONInvalido_400(t *testing.T) {
 
 func TestCrearVehiculo_PlacaVacia_400(t *testing.T) {
 	// Preparar
-	r, token := setupRouter(t)
+	r, token := setupRouterAdmin(t)
 
 	body := models.Vehiculo{ResidenteID: 1, Placa: "", Marca: "Toyota"}
 	buf, _ := json.Marshal(body)
