@@ -215,3 +215,173 @@ func TestObtenerVehiculo_NoExiste_404(t *testing.T) {
 
 	assert.Equal(t, http.StatusNotFound, rec.Code)
 }
+
+// ── Test 4: GET /vehiculos con resultados → 200 ──────────────────────────────
+
+func TestListarVehiculos_ConToken_200(t *testing.T) {
+	// Preparar
+	r, token := setupRouter(t)
+
+	// Sembrar un vehículo antes de listar, para no depender de datos vacíos
+	body := models.Vehiculo{ResidenteID: 1, Placa: "PBG-2241", Marca: "Toyota"}
+	buf, _ := json.Marshal(body)
+	reqCrear := httptest.NewRequest(http.MethodPost, "/vehiculos", bytes.NewReader(buf))
+	reqCrear.Header.Set("Content-Type", "application/json")
+	reqCrear.Header.Set("Authorization", "Bearer "+token)
+	r.ServeHTTP(httptest.NewRecorder(), reqCrear)
+
+	req := httptest.NewRequest(http.MethodGet, "/vehiculos", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec := httptest.NewRecorder()
+
+	// Ejecutar
+	r.ServeHTTP(rec, req)
+
+	// Verificar
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	var lista []models.Vehiculo
+	err := json.Unmarshal(rec.Body.Bytes(), &lista)
+	require.NoError(t, err)
+	assert.Len(t, lista, 1)
+	assert.Equal(t, "PBG-2241", lista[0].Placa)
+}
+
+// ── Test 5: PUT /vehiculos/{id} válido → 200 ─────────────────────────────────
+
+func TestActualizarVehiculo_Valido_200(t *testing.T) {
+	// Preparar: crear un vehículo para luego actualizarlo
+	r, token := setupRouter(t)
+
+	crearBody := models.Vehiculo{ResidenteID: 1, Placa: "PBG-2241", Marca: "Toyota", Modelo: "Corolla"}
+	buf, _ := json.Marshal(crearBody)
+	reqCrear := httptest.NewRequest(http.MethodPost, "/vehiculos", bytes.NewReader(buf))
+	reqCrear.Header.Set("Content-Type", "application/json")
+	reqCrear.Header.Set("Authorization", "Bearer "+token)
+	recCrear := httptest.NewRecorder()
+	r.ServeHTTP(recCrear, reqCrear)
+
+	var creado models.Vehiculo
+	require.NoError(t, json.Unmarshal(recCrear.Body.Bytes(), &creado))
+
+	// Ejecutar: actualizar el modelo y color
+	actualizarBody := models.Vehiculo{
+		ResidenteID: 1,
+		Placa:       "PBG-2241",
+		Marca:       "Toyota",
+		Modelo:      "Corolla Cross",
+		Color:       "Rojo",
+	}
+	bufAct, _ := json.Marshal(actualizarBody)
+	req := httptest.NewRequest(http.MethodPut, "/vehiculos/1", bytes.NewReader(bufAct))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec := httptest.NewRecorder()
+
+	r.ServeHTTP(rec, req)
+
+	// Verificar
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	var respuesta models.Vehiculo
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &respuesta))
+	assert.Equal(t, "Corolla Cross", respuesta.Modelo)
+	assert.Equal(t, "Rojo", respuesta.Color)
+}
+
+// ── Test 6: PUT /vehiculos/{id} con body inválido → 400 ──────────────────────
+
+func TestActualizarVehiculo_BodyInvalido_400(t *testing.T) {
+	// Preparar
+	r, token := setupRouter(t)
+
+	req := httptest.NewRequest(http.MethodPut, "/vehiculos/1", bytes.NewReader([]byte("{esto no es json")))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec := httptest.NewRecorder()
+
+	// Ejecutar
+	r.ServeHTTP(rec, req)
+
+	// Verificar
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
+// ── Test 7: DELETE /vehiculos/{id} no existe → 404 ───────────────────────────
+
+func TestBorrarVehiculo_NoExiste_404(t *testing.T) {
+	// Preparar: base vacía, ningún vehículo creado
+	r, token := setupRouter(t)
+
+	req := httptest.NewRequest(http.MethodDelete, "/vehiculos/999", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec := httptest.NewRecorder()
+
+	// Ejecutar
+	r.ServeHTTP(rec, req)
+
+	// Verificar: el service devuelve ErrVehiculoNoEncontrado → statusDeError → 404
+	assert.Equal(t, http.StatusNotFound, rec.Code)
+}
+
+// ── Test 8: DELETE /vehiculos/{id} existente → 204 ───────────────────────────
+
+func TestBorrarVehiculo_Existente_204(t *testing.T) {
+	// Preparar: crear un vehículo para luego borrarlo
+	r, token := setupRouter(t)
+
+	crearBody := models.Vehiculo{ResidenteID: 1, Placa: "PBG-2241", Marca: "Toyota"}
+	buf, _ := json.Marshal(crearBody)
+	reqCrear := httptest.NewRequest(http.MethodPost, "/vehiculos", bytes.NewReader(buf))
+	reqCrear.Header.Set("Content-Type", "application/json")
+	reqCrear.Header.Set("Authorization", "Bearer "+token)
+	r.ServeHTTP(httptest.NewRecorder(), reqCrear)
+
+	// Ejecutar
+	req := httptest.NewRequest(http.MethodDelete, "/vehiculos/1", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+
+	// Verificar
+	assert.Equal(t, http.StatusNoContent, rec.Code)
+}
+
+// ── Test 9: POST /vehiculos con JSON inválido → 400 ──────────────────────────
+
+func TestCrearVehiculo_JSONInvalido_400(t *testing.T) {
+	// Preparar
+	r, token := setupRouter(t)
+
+	req := httptest.NewRequest(http.MethodPost, "/vehiculos", bytes.NewReader([]byte("{esto no es json")))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec := httptest.NewRecorder()
+
+	// Ejecutar
+	r.ServeHTTP(rec, req)
+
+	// Verificar
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
+// ── Test 10: POST /vehiculos con campo requerido vacío → 400 ─────────────────
+
+func TestCrearVehiculo_PlacaVacia_400(t *testing.T) {
+	// Preparar
+	r, token := setupRouter(t)
+
+	body := models.Vehiculo{ResidenteID: 1, Placa: "", Marca: "Toyota"}
+	buf, _ := json.Marshal(body)
+
+	req := httptest.NewRequest(http.MethodPost, "/vehiculos", bytes.NewReader(buf))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec := httptest.NewRecorder()
+
+	// Ejecutar
+	r.ServeHTTP(rec, req)
+
+	// Verificar: el service rechaza la placa vacía antes de llegar al repo
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+}
