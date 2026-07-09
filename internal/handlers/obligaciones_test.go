@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
+	"golang.org/x/crypto/bcrypt"
 
 	"condominio-api/internal/middleware"
 	"condominio-api/internal/models"
@@ -15,8 +16,13 @@ import (
 	"condominio-api/internal/storage"
 )
 
-// Tiene dos tests: uno que prueba que crear una obligación válida responde "201 creado",
-// y otro que prueba que si no mandas el token de seguridad, te rechaza con "401 no autorizado".
+// hashPasswordParaTest genera un hash bcrypt real, para poder hacer
+// AuthService.Login(...) con la misma contraseña en texto plano en tests.
+func hashPasswordParaTest(t *testing.T, password string) (string, error) {
+	t.Helper()
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	return string(hash), err
+}
 
 type fakeObligacionRepo struct {
 	obligaciones []models.Obligacion
@@ -59,13 +65,55 @@ func (f *fakeObligacionRepo) BorrarObligacion(id uint) bool {
 }
 
 // nuevoServidorObligaciones construye un *Server solo con el servicio de
-// Obligaciones montado, para los tests que no necesitan autenticación real.
+// Obligaciones montado, para los tests que llaman al handler directo
+// (sin pasar por middleware).
 func nuevoServidorObligaciones(repo storage.ObligacionRepository) *Server {
 	svc := service.NewObligacionesService(repo)
-
 	return NewServer(Services{
 		Obligaciones: svc,
 	})
+}
+
+// nuevoRouterObligacionesConRol monta el router completo (middleware.Auth +
+// RequireRol reales) y devuelve un token JWT válido para el rol pedido.
+// Reutiliza fakeUserRepo, ya definido en area_test.go.
+func nuevoRouterObligacionesConRol(t *testing.T, rol string, repoObligaciones storage.ObligacionRepository) (chi.Router, string) {
+	t.Helper()
+
+	email := "obligaciones-" + rol + "@test.com"
+	fakeUsuarios := &fakeUserRepo{
+		usuarios: []models.Usuario{
+			{ID: 1, Email: email, Rol: rol},
+		},
+	}
+	// Generamos un hash real para poder hacer Login con el mismo password.
+	hash, err := hashPasswordParaTest(t, "password123")
+	if err != nil {
+		t.Fatalf("error generando hash de test: %v", err)
+	}
+	fakeUsuarios.usuarios[0].PasswordHash = hash
+
+	authSvc := service.NewAuthService(fakeUsuarios)
+	svc := service.NewObligacionesService(repoObligaciones)
+	srv := NewServer(Services{
+		Auth:         authSvc,
+		Obligaciones: svc,
+	})
+
+	r := chi.NewRouter()
+	r.Route("/api/v1", func(r chi.Router) {
+		r.Group(func(r chi.Router) {
+			r.Use(middleware.Auth(authSvc))
+			MontarRutasObligaciones(r, srv)
+		})
+	})
+
+	token, err := authSvc.Login(email, "password123")
+	if err != nil {
+		t.Fatalf("error generando token de test: %v", err)
+	}
+
+	return r, token
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -92,28 +140,10 @@ func TestCreateObligacion_DevuelveCreated(t *testing.T) {
 	}
 }
 
-// Test de autenticación real: usa el middleware.Auth de verdad y el
-// fakeUserRepo/AuthService ya definidos en area_test.go — mismo patrón
-// que nuevoRouterDeTest, pero montando las rutas de Obligaciones.
+// Test de autenticación real: usa el middleware.Auth de verdad.
 func TestObligaciones_SinToken_Devuelve401(t *testing.T) {
-	fakeUsuarios := &fakeUserRepo{}
-	authSvc := service.NewAuthService(fakeUsuarios)
-
 	fake := &fakeObligacionRepo{}
-	svc := service.NewObligacionesService(fake)
-
-	srv := NewServer(Services{
-		Auth:         authSvc,
-		Obligaciones: svc,
-	})
-
-	r := chi.NewRouter()
-	r.Route("/api/v1", func(r chi.Router) {
-		r.Group(func(r chi.Router) {
-			r.Use(middleware.Auth(authSvc))
-			MontarRutasObligaciones(r, srv)
-		})
-	})
+	r, _ := nuevoRouterObligacionesConRol(t, "residente", fake)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/obligaciones", nil)
 	// A propósito NO se agrega el header Authorization
@@ -297,5 +327,70 @@ func TestDeleteObligacion_IDInvalido_Devuelve400(t *testing.T) {
 
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("esperaba 400 Bad Request, obtuve %d", rec.Code)
+	}
+}
+
+// ---------- RequireRol — protección por rol en escritura, con JWT real ────────
+
+func TestCreateObligacion_ConTokenResidente_Devuelve403(t *testing.T) {
+	fake := &fakeObligacionRepo{}
+	r, token := nuevoRouterObligacionesConRol(t, service.RolResidente, fake)
+
+	body := models.Obligacion{
+		ResidenteID: 1,
+		Tipo:        "mensual",
+		Monto:       150.00,
+		Periodo:     "2026-06",
+	}
+	jsonBody, _ := json.Marshal(body)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/obligaciones", bytes.NewReader(jsonBody))
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec := httptest.NewRecorder()
+
+	r.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("esperaba 403 Forbidden con rol residente, obtuve %d. Body: %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestCreateObligacion_ConTokenAdmin_Devuelve201(t *testing.T) {
+	fake := &fakeObligacionRepo{}
+	r, token := nuevoRouterObligacionesConRol(t, service.RolAdmin, fake)
+
+	body := models.Obligacion{
+		ResidenteID: 1,
+		Tipo:        "mensual",
+		Monto:       150.00,
+		Periodo:     "2026-06",
+	}
+	jsonBody, _ := json.Marshal(body)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/obligaciones", bytes.NewReader(jsonBody))
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec := httptest.NewRecorder()
+
+	r.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("esperaba 201 Created con rol admin, obtuve %d. Body: %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestListarObligaciones_ConTokenResidente_Devuelve200(t *testing.T) {
+	fake := &fakeObligacionRepo{
+		obligaciones: []models.Obligacion{{ID: 1, ResidenteID: 1, Monto: 50}},
+	}
+	r, token := nuevoRouterObligacionesConRol(t, service.RolResidente, fake)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/obligaciones", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec := httptest.NewRecorder()
+
+	r.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("esperaba 200 OK para lectura con rol residente, obtuve %d", rec.Code)
 	}
 }
