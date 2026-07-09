@@ -1,4 +1,4 @@
-package handlers
+package handlers_test
 
 import (
 	"bytes"
@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"golang.org/x/crypto/bcrypt"
 
+	"condominio-api/internal/handlers"
 	"condominio-api/internal/middleware"
 	"condominio-api/internal/models"
 	"condominio-api/internal/service"
@@ -64,19 +65,20 @@ func (f *fakeObligacionRepo) BorrarObligacion(id uint) bool {
 	return false
 }
 
-// nuevoServidorObligaciones construye un *Server solo con el servicio de
-// Obligaciones montado, para los tests que llaman al handler directo
-// (sin pasar por middleware).
-func nuevoServidorObligaciones(repo storage.ObligacionRepository) *Server {
+// nuevoServidorObligaciones construye un *handlers.Server solo con el
+// servicio de Obligaciones montado, para los tests que llaman al handler
+// directo (sin pasar por middleware).
+func nuevoServidorObligaciones(repo storage.ObligacionRepository) *handlers.Server {
 	svc := service.NewObligacionesService(repo)
-	return NewServer(Services{
+	return handlers.NewServer(handlers.Services{
 		Obligaciones: svc,
 	})
 }
 
 // nuevoRouterObligacionesConRol monta el router completo (middleware.Auth +
 // RequireRol reales) y devuelve un token JWT válido para el rol pedido.
-// Reutiliza fakeUserRepo, ya definido en area_test.go.
+// Reutiliza fakeUserRepo, ya definido en handlers_vehiculo_test.go (mismo
+// paquete handlers_test).
 func nuevoRouterObligacionesConRol(t *testing.T, rol string, repoObligaciones storage.ObligacionRepository) (chi.Router, string) {
 	t.Helper()
 
@@ -95,7 +97,7 @@ func nuevoRouterObligacionesConRol(t *testing.T, rol string, repoObligaciones st
 
 	authSvc := service.NewAuthService(fakeUsuarios)
 	svc := service.NewObligacionesService(repoObligaciones)
-	srv := NewServer(Services{
+	srv := handlers.NewServer(handlers.Services{
 		Auth:         authSvc,
 		Obligaciones: svc,
 	})
@@ -104,7 +106,7 @@ func nuevoRouterObligacionesConRol(t *testing.T, rol string, repoObligaciones st
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.Auth(authSvc))
-			MontarRutasObligaciones(r, srv)
+			handlers.MontarRutasObligaciones(r, srv)
 		})
 	})
 
