@@ -9,7 +9,7 @@ type Vehiculo struct {
 	Marca       string    `json:"marca" gorm:"not null"`
 	Modelo      string    `json:"modelo"`
 	Color       string    `json:"color"`
-	Activo      bool      `json:"activo;default:true"`
+	Activo      bool      `json:"activo: true"`
 	CreatedAt   time.Time `json:"created_at"`
 }
 
