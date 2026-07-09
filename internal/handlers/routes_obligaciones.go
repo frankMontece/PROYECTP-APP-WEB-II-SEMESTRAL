@@ -2,23 +2,27 @@ package handlers
 
 import (
 	"github.com/go-chi/chi/v5"
+
+	"condominio-api/internal/middleware"
 )
 
 // MontarRutasObligaciones registra las rutas de Obligaciones y Multas.
-// No monta auth ni decide middleware — eso lo hace main.go, igual que
-// con MontarRutasSocial y MontarRutasParqueo.
+// Lectura (GET) abierta a cualquier usuario autenticado; escritura
+// (POST/PUT/DELETE) restringida a rol "admin".
 func MontarRutasObligaciones(r chi.Router, srv *Server) {
+	soloAdmin := middleware.RequireRol("admin")
+
 	// Obligaciones
 	r.Get("/obligaciones", srv.ListarObligaciones)
-	r.Post("/obligaciones", srv.CreateObligacion)
 	r.Get("/obligaciones/{id}", srv.GetObligacion)
-	r.Put("/obligaciones/{id}", srv.UpdateObligacion)
-	r.Delete("/obligaciones/{id}", srv.DeleteObligacion)
+	r.With(soloAdmin).Post("/obligaciones", srv.CreateObligacion)
+	r.With(soloAdmin).Put("/obligaciones/{id}", srv.UpdateObligacion)
+	r.With(soloAdmin).Delete("/obligaciones/{id}", srv.DeleteObligacion)
 
 	// Multas
 	r.Get("/multas", srv.ListarMultas)
-	r.Post("/multas", srv.CreateMulta)
 	r.Get("/multas/{id}", srv.GetMulta)
-	r.Put("/multas/{id}", srv.UpdateMulta)
-	r.Delete("/multas/{id}", srv.DeleteMulta)
+	r.With(soloAdmin).Post("/multas", srv.CreateMulta)
+	r.With(soloAdmin).Put("/multas/{id}", srv.UpdateMulta)
+	r.With(soloAdmin).Delete("/multas/{id}", srv.DeleteMulta)
 }
