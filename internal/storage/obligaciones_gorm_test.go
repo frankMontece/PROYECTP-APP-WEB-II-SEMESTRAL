@@ -183,7 +183,7 @@ func TestObligacionesGORM_SembrarVacio_InsertaCuandoEstaVacia(t *testing.T) {
 	db := abrirDBPrueba(t)
 	repo := storage.NewObligacionSQLite(db)
 
-	repo.SembrarVacio()
+	storage.NewObligacionSQLite(db)
 
 	lista := repo.ListarObligaciones()
 	if len(lista) != 3 {
@@ -205,10 +205,10 @@ func TestObligacionesGORM_SembrarVacio_NoDuplicaSiYaHayDatos(t *testing.T) {
 		Periodo:     "2026-06",
 	})
 
-	repo.SembrarVacio() // no debería hacer nada, ya hay 1 registro
+	storage.NewObligacionSQLite(db) // no debería hacer nada, ya hay 1 registro
 
 	lista := repo.ListarObligaciones()
 	if len(lista) != 1 {
-		t.Fatalf("esperaba que SembrarVacio no insertara nada (ya había 1 registro), hay %d", len(lista))
+		t.Fatalf("esperaba que SembrarObligacion no insertara nada (ya había 1 registro), hay %d", len(lista))
 	}
 }

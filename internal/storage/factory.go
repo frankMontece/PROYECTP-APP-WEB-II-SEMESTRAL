@@ -72,13 +72,13 @@ func Inicializar(driver, dsn, rutaDB string) (*Recursos, error) {
 	reserva := NewReservaSQLite(gdb)
 	notificacion := NewNotificacionSQLite(gdb)
 
-	// 4. Sembrar datos iniciales — solo si el driver no es postgres, nunca en producción.
-	if driver != "postgres" {
-		SembrarSocial(gdb)
-		obligaciones.SembrarVacio()
-		multas.SembrarVacio()
-		SembrarParqueo(gdb)
-	}
+	// 4. Sembrar datos iniciales — siempre, incluyendo postgres, para tener
+	//    datos de ejemplo listos en la demo. Cada función es idempotente:
+	//    solo inserta si la tabla correspondiente está vacía.
+	SembrarUsuarios(gdb)
+	SembrarSocial(gdb)
+	SembrarObligacion(gdb)
+	SembrarParqueo(gdb)
 
 	// 5. Cierre ordenado de la conexión a la base de datos.
 	cerrar := func() error {
