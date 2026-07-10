@@ -312,13 +312,3 @@ go test ./... -cover
 ```
 
 Cada integrante cubre las 3 capas (storage → service → handler) de una entidad representativa de su módulo, con mocks/fakes del repositorio y casos edge (error paths, inputs inválidos). Cobertura mínima exigida: 50% en la capa de service.
-
-## Colección de Postman
-
-Disponible en [`/postman/coleccion.postman_collection.json`](./postman/coleccion.postman_collection.json).
-<!-- Ajustar la ruta si el archivo se ubica en otra carpeta del repo -->
-
-## Documento de cierre
-
-Disponible en [`/docs/documento-cierre.md`](./docs/documento-cierre.md).
-<!-- Ajustar la ruta si el archivo se ubica en otra carpeta del repo -->
