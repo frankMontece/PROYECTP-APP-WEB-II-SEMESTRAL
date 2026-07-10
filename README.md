@@ -212,6 +212,17 @@ Módulo de control de acceso y gestión vehicular. Cubre tres entidades relacion
 | PUT    | `/api/v1/vehiculos/{id}` | admin | Actualiza un vehículo |
 | DELETE | `/api/v1/vehiculos/{id}` | admin | Elimina un vehículo |
 
+**Ejemplo de body (POST/PUT):**
+```json
+{
+  "residente_id": 1,
+  "placa": "MKS-2841",
+  "marca": "Nissan",
+  "modelo": "Versa",
+  "color": "Rojo"
+}
+```
+
 ### Visitas
 
 | Método | Endpoint | Rol requerido | Descripción |
@@ -223,6 +234,17 @@ Módulo de control de acceso y gestión vehicular. Cubre tres entidades relacion
 | PUT    | `/api/v1/visitas/{id}/salida` | admin | Registra la salida (expira el QR) |
 | DELETE | `/api/v1/visitas/{id}` | admin | Elimina una visita |
 
+**Ejemplo de body (POST/PUT):**
+```json
+{
+  "condominio_id": 1,
+  "residente_id": 1,
+  "placa_visitante": "ABC123",
+  "nombre_visitante": "Carlos Pérez",
+  "motivo": "Visita familiar"
+}
+```
+
 ### Accesos
 
 | Método | Endpoint | Rol requerido | Descripción |
@@ -232,7 +254,16 @@ Módulo de control de acceso y gestión vehicular. Cubre tres entidades relacion
 | POST   | `/api/v1/accesos` | admin | Registra un movimiento (entrada/salida) |
 | DELETE | `/api/v1/accesos/{id}` | admin | Elimina un registro de acceso |
 
----
+**Ejemplo de body (POST/PUT):**
+```json
+{
+  "condominio_id": 1,
+  "residente_id": 1,
+  "placa_visitante": "ABC123",
+  "nombre_visitante": "Carlos Pérez",
+  "motivo": "Visita familiar"
+}
+```
 
 ## Módulo Área Social — Frank Montece
 
