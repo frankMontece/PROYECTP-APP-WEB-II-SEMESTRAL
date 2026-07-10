@@ -183,7 +183,7 @@ func TestObligacionesGORM_SembrarVacio_InsertaCuandoEstaVacia(t *testing.T) {
 	db := abrirDBPrueba(t)
 	repo := storage.NewObligacionSQLite(db)
 
-	storage.NewObligacionSQLite(db)
+	storage.SembrarObligacion(db)
 
 	lista := repo.ListarObligaciones()
 	if len(lista) != 3 {
@@ -205,7 +205,7 @@ func TestObligacionesGORM_SembrarVacio_NoDuplicaSiYaHayDatos(t *testing.T) {
 		Periodo:     "2026-06",
 	})
 
-	storage.NewObligacionSQLite(db) // no debería hacer nada, ya hay 1 registro
+	storage.SembrarObligacion(db) // no debería hacer nada, ya hay 1 registro
 
 	lista := repo.ListarObligaciones()
 	if len(lista) != 1 {
